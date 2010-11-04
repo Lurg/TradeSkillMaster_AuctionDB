@@ -1,6 +1,6 @@
 -- register this file with Ace Libraries
 local TSM = select(2, ...)
-TSM = LibStub("AceAddon-3.0"):NewAddon(TSM, "TradeSkillMaster_AuctionDB", "AceEvent-3.0", "AceConsole-3.0")
+TSM = LibStub("AceAddon-3.0"):NewAddon(TSM, "TradeSkillMaster_AuctionDB", "AceEvent-3.0", "AceConsole-3.0", "AceSerializer-3.0")
 
 TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Version") -- current version of the addon
 
@@ -17,14 +17,21 @@ local savedDBDefaults = {
 function TSM:OnInitialize()
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
-	TSM.recent = TSM.db.factionrealm.recentAuctions
-	TSM.data = TSM.db.factionrealm.scanData
+	if type(TSM.db.factionrealm.scanData) == "string" then
+		TSM.data = TSM:Deserialize(TSM.db.factionrealm.scanData)
+	else
+		TSM.data = TSM.db.factionrealm.scanData
+	end
 	
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, "Sapu", GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbstop", TSM.Stop, "stops collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "looks up the market value for an item", true)
+end
+
+function TSM:OnDisable()
+	TSM.db.factionrealm.data = TSM:Serialize(TSM.data)
 end
 
 function TSM:Start()
@@ -119,40 +126,40 @@ function TSM:Lookup(link)
 	
 	local itemID = TSM:GetSafeLink(nLink)
 	if itemID and TSM.data[itemID] then
-		TSM:Print("The market value of " .. name .. " is " .. TSM.data[itemID].correctedMean .. " and the item has been seen " .. TSM.data[itemID].n .. " times.")
+		TSM:Print("The market value of " .. name .. " is " .. TSM.data[itemID].c .. " and the item has been seen " .. TSM.data[itemID].n .. " times.")
 	else
 		TSM:Print("No data for " .. name)
 	end
 end
 
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
-	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, dTimeResidual=0, dTimeResidualI=0, lastTime=time(), filteringDisabled=false}
+	TSM.data[itemID] = TSM.data[itemID] or {n=0, u=0, c=0, m=0, r=0, l=0, t=time(), f=false}
 	local item = TSM.data[itemID]
 	item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
-	local dTime = time() - item.lastTime
-	item.lastTime = time()
-	if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
-		dTime = item.dTimeResidual * math.exp(-item.dTimeResidualI)
-		item.dTimeResidualI = item.dTimeResidualI + 1
+	local dTime = time() - item.t
+	item.t = time()
+	if item.l > 0 and dTime < item.r then
+		dTime = item.r * math.exp(-item.l)
+		item.l = item.l + 1
 	end
-	local delta = x - item.uncorrectedMean
-	item.uncorrectedMean = item.uncorrectedMean + delta/item.n
-	item.M2 = item.M2 + delta*(x - item.uncorrectedMean)
+	local delta = x - item.u
+	item.u = item.u + delta/item.n
+	item.m = item.m + delta*(x - item.u)
 	local stdDev = nil
 	if item.n ~= 1 then
-		stdDev = math.sqrt(item.M2/(item.n - 1))
+		stdDev = math.sqrt(item.m/(item.n - 1))
 	end
-	if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
-		item.dTimeResidual = dTime
-		item.dTimeResidualI = 1
+	if (dTime >= 3600*24 and item.l == 0) or (dTime > item.r and item.l > 0) then
+		item.r = dTime
+		item.l = 1
 	end
-	if stdDev==nil or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
-		item.correctedMean = item.uncorrectedMean
-		if item.n == 2 then item.filteringDisabled = true end
-	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev + item.correctedMean) > x and (item.correctedMean - stdDev) < x and item.n > 2) or (item.filteringDisabled) then
+	if stdDev==nil or stdDev==0 or item.c == 0 or item.n <= 2 then
+		item.c = item.u
+		if item.n == 2 then item.f = true end
+	elseif (stdDev ~= 0 and item.c ~= 0 and (stdDev + item.c) > x and (item.c - stdDev) < x and item.n > 2) or (item.f) then
 		local w = TSM:GetWeight(dTime, item.n)
-		item.correctedMean = w*item.correctedMean + (1-w)*x
-		if stdDev > 1.5*math.abs(item.correctedMean - x) then item.filteringDisabled = false end
+		item.c = w*item.c + (1-w)*x
+		if stdDev > 1.5*math.abs(item.c - x) then item.f = false end
 	end
 end
 
@@ -171,6 +178,6 @@ end
 function TSM:GetSafeLink(link)
 	if not link then return end
 	local s, e = string.find(link, "|H(.-):([-0-9]+)")
-	local fLink = string.sub(link, s+2, e)
-	return fLink
+	local fLink = string.sub(link, s+7, e)
+	return tonumber(fLink) or fLink
 end
