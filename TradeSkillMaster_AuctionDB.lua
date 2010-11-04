@@ -22,6 +22,7 @@ function TSM:OnInitialize()
 	else
 		TSM.data = TSM.db.factionrealm.scanData
 	end
+	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, "Sapu", GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
@@ -31,7 +32,7 @@ function TSM:OnInitialize()
 end
 
 function TSM:OnDisable()
-	TSM.db.factionrealm.data = TSM:Serialize(TSM.data)
+	TSM.db.factionrealm.scanData = TSM:Serialize(TSM.data)
 end
 
 function TSM:Start()
