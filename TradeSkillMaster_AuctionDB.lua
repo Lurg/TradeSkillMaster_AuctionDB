@@ -24,6 +24,7 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbstop", TSM.Stop, "stops collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
+	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "looks up the market value for an item", true)
 end
 
 function TSM:Start()
@@ -68,13 +69,11 @@ function TSM:ScanAuctions()
 			delay.retries = delay.retries - 1
 			delay:Show()
 		else
-			print("Got it", delay.retries)
 			delay.retries = 3
 		end
 		return
 	end
 	local sTime = GetTime()
-	print("here")
 
 	for i=1, GetNumAuctionItems("list") do
 		-- checks whether or not the name and owner of the auctions are valid
@@ -92,8 +91,6 @@ function TSM:ScanAuctions()
 		delay:Show()
 		delay.retries = 3
 	end
-	
-	print("finished in " .. GetTime() - sTime)
 end
 
 function TSM:Stop()
@@ -113,6 +110,21 @@ function TSM:Reset()
 	print("Reset Data")
 end
 
+function TSM:Lookup(link)
+	local name, nLink = GetItemInfo(link)
+	if not name then
+		TSM:Print("Invalid item \"" .. link .. "\". Check your spelling or try using an item link instead of the name.")
+		return
+	end
+	
+	local itemID = TSM:GetSafeLink(nLink)
+	if itemID and TSM.data[itemID] then
+		TSM:Print("The market value of " .. name .. " is " .. TSM.data[itemID].correctedMean .. " and the item has been seen " .. TSM.data[itemID].n .. " times.")
+	else
+		TSM:Print("No data for " .. name)
+	end
+end
+
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
 	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, dTimeResidual=0, dTimeResidualI=0, lastTime=time(), filteringDisabled=false}
 	local item = TSM.data[itemID]
@@ -130,7 +142,6 @@ function TSM:OneIteration(x, itemID) -- x is the market price in the current ite
 	if item.n ~= 1 then
 		stdDev = math.sqrt(item.M2/(item.n - 1))
 	end
-	--if stdDev then print(stdDev) end
 	if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
 		item.dTimeResidual = dTime
 		item.dTimeResidualI = 1
