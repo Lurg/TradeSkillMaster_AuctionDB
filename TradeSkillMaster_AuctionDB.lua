@@ -18,11 +18,17 @@ function TSM:OnInitialize()
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 	if type(TSM.db.factionrealm.scanData) == "string" then
-		TSM.data = TSM:Deserialize(TSM.db.factionrealm.scanData)
+		TSM.data = select(2, TSM:Deserialize(TSM.db.factionrealm.scanData))
+		if type(TSM.data) == "string" then
+			print(TSM.data)
+			TSM.data = {}
+		end
 	else
 		TSM.data = TSM.db.factionrealm.scanData
 	end
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
+	TSM.db.factionrealm.data = nil
+	TSM.db.factionrealm.test = nil
 	
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, "Sapu", GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
