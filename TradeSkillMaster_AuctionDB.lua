@@ -73,6 +73,7 @@ function TSM:ScanAuctions()
 		end
 		return
 	end
+	local sTime = GetTime()
 	print("here")
 
 	for i=1, GetNumAuctionItems("list") do
@@ -91,6 +92,8 @@ function TSM:ScanAuctions()
 		delay:Show()
 		delay.retries = 3
 	end
+	
+	print("finished in " .. GetTime() - sTime)
 end
 
 function TSM:Stop()
@@ -127,7 +130,7 @@ function TSM:OneIteration(x, itemID) -- x is the market price in the current ite
 	if item.n ~= 1 then
 		stdDev = math.sqrt(item.M2/(item.n - 1))
 	end
-	if stdDev then print(stdDev) end
+	--if stdDev then print(stdDev) end
 	if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
 		item.dTimeResidual = dTime
 		item.dTimeResidualI = 1
@@ -149,15 +152,8 @@ function TSM:GetWeight(dTime, i)
 	--   to cut down on processing time.  Also note that as i -> 2, k -> negative infinity
 	--   so we'd like to avoid i <= 2
 	if dTime < 3600 then return (i-1)/i end
-	local k
 	local s = 14*24*60*60 -- 2 weeks
-	if not TSM.data.kVals then TSM.data.kVals = {} end
-	if (TSM.data.kVals and TSM.data.kVals[i]) then -- whereever we cache our k values
-		k = TSM.data.kVals[i]
-	elseif TSM.data.kVals then
-		k = -s/(math.log(i/2)/math.log(0.5))
-		TSM.data.kVals[i] = k
-	end
+	local k = -s/(math.log(i/2)/math.log(0.5))
 	return (i-i^(dTime/(dTime + k)))/i
 end
 
