@@ -1,0 +1,5 @@
+enable-nolib-creation: no
+package-as: TradeSkillMaster_AuctionDB
+manual-changelog:
+    filename: ChangeLog.txt
+    markup-type: creole

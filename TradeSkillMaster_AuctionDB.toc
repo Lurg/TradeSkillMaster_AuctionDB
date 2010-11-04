@@ -1,0 +1,8 @@
+## Interface: 40000
+## Title: TradeSkillMaster_AuctionDB
+## Notes: Stores auction house data and calculates market prices.
+## Author: Sapu94
+## Version: r@file-revision@
+## SavedVariables: TradeSkillMaster_AuctionDBDB
+
+TradeSkillMaster_AuctionDB.lua
