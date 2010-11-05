@@ -8,8 +8,8 @@ local BASE_DELAY = 0.05
 
 local savedDBDefaults = {
 	factionrealm = {
-		scanData = {},
-		recentAuctions = {},
+		scanData = "",
+		time = 0,
 	},
 }
 
@@ -20,7 +20,6 @@ function TSM:OnInitialize()
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
-	print(TSM.db.factionrealm.time, GetTime() - sTime)
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, "Sapu", GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
@@ -28,6 +27,9 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "looks up the market value for an item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
+	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
+	
+	TSM:Start()
 end
 
 function TSM:OnDisable()
@@ -37,8 +39,8 @@ function TSM:OnDisable()
 end
 
 function TSM:Start()
-	print("Started")
 	TSM:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
+	TSM:Print("Started")
 end
 
 local delay = CreateFrame("Frame")
@@ -189,9 +191,9 @@ function TSM:GetSafeLink(link)
 end
 
 -- Stolen from Tekkub!
-local GOLD_TEXT = "|cffffd700g|dTimeResidual"
-local SILVER_TEXT = "|cffc7c7cfs|dTimeResidual"
-local COPPER_TEXT = "|cffeda55fc|dTimeResidual"
+local GOLD_TEXT = "|cffffd700g|r"
+local SILVER_TEXT = "|cffc7c7cfs|r"
+local COPPER_TEXT = "|cffeda55fc|r"
 
 -- Truncates to save space: after 10g stop showing copper, after 100g stop showing silver
 function TSM:FormatTextMoney(money)
@@ -218,18 +220,18 @@ function TSM:FormatTextMoney(money)
 	return string.trim(text)
 end
 
-function TSM:Serialize(data)
+function TSM:Serialize()
 	local results = {}
-	for id, v in pairs(data) do
-		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean .. "," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.timeLeft .. "," .. ((not v.filtered and "filtered") or (v.filtered and "timeLeft")))
+	for id, v in pairs(TSM.data) do
+		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean .. "," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.timeLeft .. "," .. ((not v.filtered and "f") or (v.filtered and "t")))
 	end
-	
+	TSM.db.factionrealm.scanData = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
 
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,correctedMean,d,e,filtered,g,h in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,timeLeft=g, filtered=(h == "timeLeft")}
+		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,timeLeft=g, filtered=(h == "t")}
 	end
 end
