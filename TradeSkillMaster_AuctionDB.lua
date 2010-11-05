@@ -15,30 +15,25 @@ local savedDBDefaults = {
 
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
+	local sTime = GetTime()
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
-	if type(TSM.db.factionrealm.scanData) == "string" then
-		TSM.data = select(2, TSM:Deserialize(TSM.db.factionrealm.scanData))
-		if type(TSM.data) == "string" then
-			print(TSM.data)
-			TSM.data = {}
-		end
-	else
-		TSM.data = TSM.db.factionrealm.scanData
-	end
+	TSM:Deserialize(TSM.db.factionrealm.scanData)
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
-	TSM.db.factionrealm.data = nil
-	TSM.db.factionrealm.test = nil
-	
+	print(TSM.db.factionrealm.time, GetTime() - sTime)
+
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, "Sapu", GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbstop", TSM.Stop, "stops collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "looks up the market value for an item", true)
+	TSMAPI:RegisterData("market", TSM.GetData)
 end
 
 function TSM:OnDisable()
-	TSM.db.factionrealm.scanData = TSM:Serialize(TSM.data)
+	local sTime = GetTime()
+	TSM:Serialize(TSM.data)
+	TSM.db.factionrealm.time = GetTime() - sTime
 end
 
 function TSM:Start()
@@ -110,10 +105,8 @@ end
 function TSM:Stop()
 	TSM:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
 	for i, v in pairs(TSM.data) do
-		if i ~= "kvals" then
-			print("index = " .. i)
-			foreach(v, print)
-		end
+		print("index = " .. i)
+		foreach(v, function(a, b) if a == "u" or a == "c" then print(a, TSM:FormatTextMoney(b)) else print(a, b) end end)
 	end
 end
 
@@ -133,10 +126,16 @@ function TSM:Lookup(link)
 	
 	local itemID = TSM:GetSafeLink(nLink)
 	if itemID and TSM.data[itemID] then
-		TSM:Print("The market value of " .. name .. " is " .. TSM.data[itemID].c .. " and the item has been seen " .. TSM.data[itemID].n .. " times.")
+		TSM:Print("The market value of " .. name .. " is " .. TSM:FormatTextMoney(TSM.data[itemID].c) ..
+			" and the item has been seen " .. TSM.data[itemID].n .. " times.")
 	else
 		TSM:Print("No data for " .. name)
 	end
+end
+
+function TSM:GetData(itemID, extra)
+	if not TSM.data[itemID] then return end
+	return TSM.data[itemID].c, TSM.data[itemID].n
 end
 
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
@@ -187,4 +186,52 @@ function TSM:GetSafeLink(link)
 	local s, e = string.find(link, "|H(.-):([-0-9]+)")
 	local fLink = string.sub(link, s+7, e)
 	return tonumber(fLink) or fLink
+end
+
+-- Stolen from Tekkub!
+local GOLD_TEXT = "|cffffd700g|r"
+local SILVER_TEXT = "|cffc7c7cfs|r"
+local COPPER_TEXT = "|cffeda55fc|r"
+
+-- Truncates to save space: after 10g stop showing copper, after 100g stop showing silver
+function TSM:FormatTextMoney(money)
+	local gold = math.floor(money / COPPER_PER_GOLD)
+	local silver = math.floor((money - (gold * COPPER_PER_GOLD)) / COPPER_PER_SILVER)
+	local copper = math.floor(math.fmod(money, COPPER_PER_SILVER))
+	local text = ""
+	
+	-- Add gold
+	if gold>0 then
+		text = string.format("%d%s ", gold, GOLD_TEXT)
+	end
+	
+	-- Add silver
+	if silver>0 and gold<100 then
+		text = string.format("%s%d%s ", text, silver, SILVER_TEXT)
+	end
+	
+	-- Add copper if we have no silver/gold found, or if we actually have copper
+	if text == "" or (copper>0 and gold<=10) then
+		text = string.format("%s%d%s ", text, copper, COPPER_TEXT)
+	end
+	
+	return string.trim(text)
+end
+
+function TSM:Serialize(data)
+	local results = {}
+	for id, v in pairs(data) do
+		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.u .. "," .. v.c .. "," .. v.m .. "," .. v.r .. "," .. v.l .. "," .. v.t .. "," .. ((not v.f and "f") or (v.f and "t")))
+	end
+	
+	TSM.db.factionrealm.scanData = table.concat(results)
+end
+
+function TSM:Deserialize(data)
+	local results = {}
+	for k,a,b,c,d,e,f,g,h in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
+		results[k] = {n=a,u=b,c=c,m=d,r=e,l=f,t=g, f=(h == "t")}
+	end
+	
+	TSM.data = results
 end
