@@ -450,7 +450,7 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 	-- Don't add this data if it has no buyout
 	if (not buyout) or (buyout <= 0) then return end
 	
-	if buyout > 1 then
+	for i=1, quantity do
 		TSM:OneIteration(buyout/quantity, itemID)
 	end
 
