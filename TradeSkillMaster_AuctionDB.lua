@@ -29,8 +29,6 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
-	
-	TSM:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 end
 
 function TSM:OnDisable()
@@ -109,7 +107,9 @@ end
 function TSM:Serialize()
 	local results = {}
 	for id, v in pairs(TSM.data) do
-		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean .. "," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.lastSeen .. "," .. ((not v.filtered and "f") or (v.filtered and "t")))
+		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean ..
+			"," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.lastSeen ..
+			"," .. ((not v.filtered and "f") or (v.filtered and "t")) .. "," .. v.quantity)
 	end
 	TSM.db.factionrealm.scanData = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
@@ -117,7 +117,7 @@ end
 
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
-	for k,a,b,correctedMean,d,e,filtered,g,h in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,lastSeen=g, filtered=(h == "t")}
+	for k,a,b,correctedMean,d,e,filtered,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
+		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,lastSeen=g, filtered=(h == "t"), quantity=i}
 	end
 end

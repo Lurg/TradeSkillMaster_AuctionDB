@@ -44,22 +44,24 @@ CATEGORIES["Tailoring"] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
 CATEGORIES["Engineering"] = {"5", "6$6", "6$9"}
 CATEGORIES["Cooking"] = {"4$1", "6$5", "6$13"}
 
+local status = {page=0, retries=0, timeDelay=0, AH=false, timeLeft=0, filterlist = {}}
+
 -- initialize a bunch of variables and frames used throughout the module and register some events
 function Scan:OnEnable()
-	Scan.status = {page=0, retries=0, timeDelay=0, hardRetry=nil, data=nil, AH=false,
-		queued=nil, timeLeft=0, filterlist = {}, filter=nil, data=nil, timeLeft, isScanning=nil, numItems, scantime=nil}
 	Scan.AucData = {}
 
 	-- Scan delay for soft reset
 	Scan.frame2 = CreateFrame("Frame")
 	Scan.frame2:Hide()
 	Scan.frame2:SetScript("OnUpdate", function(_, elapsed)
-		Scan.status.timeLeft = Scan.status.timeLeft - elapsed
-		if Scan.status.timeLeft < 0 then
-			Scan.status.timeLeft = 0
+		status.timeLeft = status.timeLeft - elapsed
+		if status.timeLeft < 0 then
+			status.timeLeft = 0
 			Scan.frame2:Hide()
 
-			Scan:ScanAuctions()
+			if status.isScanning ~= "GetAll" then
+				Scan:ScanAuctions()
+			end
 		end
 	end)
 
@@ -81,7 +83,7 @@ end
 
 -- fires when the AH is openned and adds the "TradeSkillMaster_Crafting - Run Scan" button to the AH frame
 function Scan:AUCTION_HOUSE_SHOW()
-	Scan.status.AH = true
+	status.AH = true
 	
 	-- delay to make sure the AH frame is completely loaded before we try and attach the scan button to it
 	local delay = CreateFrame("Frame")
@@ -157,9 +159,12 @@ function Scan.MenuList(self, level)
 	local info = self.info
 	wipe(info)
 	if level == 1 then
-		info.isTitle = 1
+		info.disabled = nil
 		info.text = "Scan Options"
 		info.notCheckable = 1
+		info.keepShownOnClick = 1
+		info.hasArrow = 1
+		info.value = "OPTIONS"
 		UIDropDownMenu_AddButton(info, level)
 
 		wipe(info)
@@ -188,6 +193,38 @@ function Scan.MenuList(self, level)
 				info.checked = TSM.db.profile.scanSelections[name]
 				UIDropDownMenu_AddButton(info, level)
 			end
+		elseif UIDROPDOWNMENU_MENU_VALUE == "OPTIONS" then
+			if TSM.db.profile.getAll == nil then
+				TSM.db.profile.getAll = false
+			end
+			
+			local function GetAllReady()
+				if not select(2, CanSendAuctionQuery()) then
+					local previous = TSM.db.profile.lastGetAll or 1/0
+					if previous > (time() - 15*60) then
+						local diff = time() - previous
+						local diffMin = math.floor(diff/60)
+						local diffSec = diff - diffMin*60
+						return "Ready in " .. diffMin .. "min " .. diffSec .. "sec"
+					else
+						return "Not Ready"
+					end
+				else
+					return "Ready"
+				end
+			end
+		
+			info.keepShownOnClick = 1
+			info.text = "Run GetAll Scan"
+			info.func = function() TSM.db.profile.getAll = not TSM.db.profile.getAll end
+			info.checked = TSM.db.profile.getAll
+			UIDropDownMenu_AddButton(info, level)
+			
+			info.keepShownOnClick = 1
+			info.notCheckable = 1
+			info.isTitle = 1
+			info.text = "GetAll Scan: " .. GetAllReady()
+			UIDropDownMenu_AddButton(info, level)
 		end
 	end
 end
@@ -195,8 +232,8 @@ end
 function Scan:AUCTION_HOUSE_CLOSED()
 	if Scan.AHFrame then Scan.AHFrame:Hide() end -- hide the statusbar
 	Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	Scan.status.AH = false
-	if Scan.status.isScanning then -- stop scanning if we were scanning (pass true to specify it was interupted)
+	status.AH = false
+	if status.isScanning then -- stop scanning if we were scanning (pass true to specify it was interupted)
 		Scan:StopScanning(true)
 	end
 end
@@ -207,8 +244,20 @@ function Scan:RunScan()
 	local scanQueue = {}
 	local num = 1
 	
-	if not Scan.status.AH then
+	if not status.AH then
 		TSM:Print("Auction house must be open in order to scan.")
+		return
+	end
+	
+	if TSM.db.profile.getAll and select(2, CanSendAuctionQuery()) then
+		status.isScanning = "GetAll"
+		wipe(Scan.AucData)
+		status.page = 0
+		status.retries = 3
+		status.hardRetry = nil
+		Scan:UpdateStatus(0)
+		Scan:UpdateStatus(0, true)
+		Scan:StartGetAllScan()
 		return
 	end
 	
@@ -258,16 +307,17 @@ function Scan:RunScan()
 	-- filter = current category being scanned for {class, subClass, invSlot}
 	-- filterList = queue of categories to scan for
 	wipe(Scan.AucData)
-	Scan.status.page = 0
-	Scan.status.retries = 0
-	Scan.status.hardRetry = nil
-	Scan.status.filterList = scanQueue
-	Scan.status.filter = scanQueue[1]
-	Scan.status.isScanning = true
-	Scan.status.numItems = #(scanQueue)
-	Scan:UpdateStatus("", 0)
-	Scan:UpdateStatus("", 0, true)
-	TSM:Start()
+	status.page = 0
+	status.retries = 0
+	status.hardRetry = nil
+	status.filterList = scanQueue
+	status.class = scanQueue[1].class
+	status.subClass = scanQueue[1].subClass
+	status.invSlot = scanQueue[1].invSlot
+	status.isScanning = "Category"
+	status.numItems = #(scanQueue)
+	Scan:UpdateStatus(0)
+	Scan:UpdateStatus(0, true)
 	
 	--starts scanning
 	Scan:SendQuery()
@@ -275,14 +325,14 @@ end
 
 -- sends a query to the AH frame once it is ready to be queried (uses Scan.frame as a delay)
 function Scan:SendQuery(forceQueue)
-	Scan.status.queued = not CanSendAuctionQuery()
-	if (not Scan.status.queued and not forceQueue) then
+	status.queued = not CanSendAuctionQuery()
+	if (not status.queued and not forceQueue) then
 		-- stop delay timer
 		Scan.frame:Hide()
-		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		
+		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
-		QueryAuctionItems("", nil, nil, Scan.status.filter.invSlot, Scan.status.filter.class, Scan.status.filter.subClass, Scan.status.page, 0, 0)
+		QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
 		Scan.frame:Show()
@@ -291,8 +341,8 @@ end
 
 -- gets called whenever the AH window is updated (something is shown in the results section)
 function Scan:AUCTION_ITEM_LIST_UPDATE()
-	if Scan.status.isScanning then
-		Scan.status.timeDelay = 0
+	if status.isScanning then
+		status.timeDelay = 0
 
 		Scan.frame2:Hide()
 		
@@ -314,8 +364,9 @@ function Scan:ScanAuctions()
 	local name, quantity, bid, buyout, owner = {}, {}, {}, {}, {}
 	
 	-- Check for bad data
-	if Scan.status.retries < 3 then
+	if status.retries < 3 then
 		local badData
+		
 		for i=1, shown do
 			-- checks whether or not the name and owner of the auctions are valid
 			-- if either are invalid, the data is bad
@@ -326,23 +377,24 @@ function Scan:ScanAuctions()
 		end
 		
 		if badData then
-			if Scan.status.hardRetry then
+			print("BAD DATA")
+			if status.hardRetry then
 				-- Hard retry
 				-- re-sends the entire query
-				Scan.status.retries = Scan.status.retries + 1
+				status.retries = status.retries + 1
 				Scan:SendQuery()
 			else
 				-- Soft retry
 				-- runs a delay and then tries to scan the query again
-				Scan.status.timeDelay = Scan.status.timeDelay + BASE_DELAY
-				Scan.status.timeLeft = BASE_DELAY
+				status.timeDelay = status.timeDelay + BASE_DELAY
+				status.timeLeft = BASE_DELAY
 				Scan.frame2:Show()
 	
 				-- If after 4 seconds of retrying we still don't have data, will go and requery to try and solve the issue
 				-- if we still don't have data, we try to scan it anyway and move on.
-				if Scan.status.timeDelay >= 4 then
-					Scan.status.hardRetry = true
-					Scan.status.retries = 0
+				if status.timeDelay >= 4 then
+					status.hardRetry = true
+					status.retries = 0
 				end
 			end
 			
@@ -350,44 +402,60 @@ function Scan:ScanAuctions()
 		end
 	end
 	
-	Scan.status.hardRetry = nil
-	Scan.status.retries = 0
-	Scan:UpdateStatus("", floor(Scan.status.page/totalPages*100 + 0.5), true)
-	Scan:UpdateStatus("", floor((1-(#(Scan.status.filterList)-Scan.status.page/totalPages)/Scan.status.numItems)*100 + 0.5))
+	status.hardRetry = nil
+	status.retries = 0
+	Scan:UpdateStatus(floor(status.page/totalPages*100 + 0.5), true)
+	Scan:UpdateStatus(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5))
 	
 	-- now that we know our query is good, time to verify and then store our data
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
 		local link = TSM:GetSafeLink(GetAuctionItemLink("list", i))
 		Scan:AddAuctionRecord(link, owner[i], quantity[i], bid[i], buyout[i])
+		
+		if status.isScanning == "GetAll" then
+			Scan:UpdateStatus(floor(1-(shown-i)*100 + 0.5))
+			print(i)
+		end
 	end
 	
+	if status.isScanning == "GetAll" then
+		-- we are done scanning!
+		Scan:StopScanning()
+		return
+	end
+	
+	print("NOOO")
+	
 	-- we are done scanning so add this data to the main table
-	if (Scan.status.page == 0 and shown == 0) then
+	if (status.page == 0 and shown == 0) then
 		Scan:AddAuctionRecord(link, "", 0, 0, 0.1)
 	end
 
 	-- This query has more pages to scan
 	-- increment the page # and send the new query
 	if shown == 50 then
-		Scan.status.page = Scan.status.page + 1
+		status.page = status.page + 1
 		Scan:SendQuery()
 		return
 	end
 	
 	-- Removes the current filter from the filterList as we are done scanning for that item
-	for i=#(Scan.status.filterList), 1, -1 do
-		if Scan.status.filterList[i] == Scan.status.filter then
-			tremove(Scan.status.filterList, i)
+	for i=#(status.filterList), 1, -1 do
+		local class, subClass, invSlot = status.filterList[i].class, status.filterList[i].subClass, status.filterList[i].invSlot
+		if class == status.class and subClass == status.subClass and invSlot == status.invSlot then
+			tremove(status.filterList, i)
 			break
 		end
 	end
-	Scan.status.filter = Scan.status.filterList[1]
 	
 	-- Query the next filter if we have one
-	if Scan.status.filter then
-		Scan:UpdateStatus("", floor((1-#(Scan.status.filterList)/Scan.status.numItems)*100 + 0.5))
-		Scan.status.page = 0
+	if status.filterList[1] then
+		status.class = status.filterList[1].class
+		status.subClass = status.filterList[1].subClass
+		status.invSlot = status.filterList[1].invSlot
+		Scan:UpdateStatus(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
+		status.page = 0
 		Scan:SendQuery()
 		return
 	end
@@ -399,7 +467,7 @@ end
 -- Add a new record to the Scan.AucData table
 function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 	-- Don't add this data if it has no buyout
-	if (not buyout) or (buyout <= 0) then return end
+	if (not buyout) or (buyout <= 0) then return "No buyout" end
 	
 	if buyout > 1 then
 		TSM:OneIteration(buyout/quantity, itemID)
@@ -425,13 +493,15 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 			record.owner = owner
 			record.quantity = record.quantity + quantity
 			record.isPlayer = (owner==select(1,UnitName("player")))
-			return
+			return "updated"
 		end
 	end
 	
 	-- Create a new entry in the table
 	tinsert(Scan.AucData[itemID].records, {owner = owner, buyout = buyout, bid = bid,
 		isPlayer = (owner==select(1,UnitName("player"))), quantity = quantity})
+		
+	return "Added"
 end
 
 -- stops the scan because it was either interupted or it was completed successfully
@@ -447,111 +517,20 @@ function Scan:StopScanning(interupted)
 			Scan.AHFrame:Hide()
 		end
 		
-		for itemID, data in pairs(Scan.AuctionData) do
+		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
 		end
 	end
 	
-	Scan.status.isScanning = nil
-	Scan.status.queued = nil
+	status.isScanning = nil
+	status.queued = nil
 	
 	Scan.frame:Hide()
 	Scan.frame2:Hide()
 end
 
--- runs calculations and stores the resulting material / craft data in the savedvariables DB (options window)
-function Scan:Calc(scanType)
-	local matList = TSM.Data:GetMats()
-
-	-- calculates the material costs
-	if (scanType == "mats" or scanType == "full") then
-		local t, total, quantity
-		local result = {}
-		local itemVar = {[34054]=80, [34055]=15, [34056]=5, [34052]=15, [34057]=10, [41163]=2, [37705]=1,
-						[35624]=5, [35623]=4, [37663]=1, [36918]=1, [43146]=4, [43145]=10}
-		for mat=1, #(matList) do
-			total = 0
-			quantity = 0
-			t = TSM.db.factionrealm.AucData[matList[mat]]
-			if TSM.db.profile.matCostMethod == "lowest" then
-				if (not t) or (not t.records) then
-					result[mat] = nil
-				else
-					sort(t.records, function(a, b) return a.buyout<b.buyout end)
-					if t.quantity > 0 then
-						result[mat] = tonumber(string.format("%.2f", ((t.records[1].buyout/100) + 0.5)/100))
-					end
-				end
-			elseif TSM.db.profile.matCostMethod == "smart" then
-				if (not t) or (not t.records) then
-					result[mat] = nil
-				else
-					if not itemVar[matList[mat]] then
-						itemVar[matList[mat]] = 5
-					end
-					sort(t.records, function(a, b) return a.buyout<b.buyout end)
-					if t.quantity < (itemVar[matList[mat]]*1.1) then
-						itemVar[matList[mat]] = t.quantity*0.9
-					end
-					itemVar[matList[mat]] = math.floor(itemVar[matList[mat]])
-					
-					if t.quantity > 0 then
-						for i=1, #(t.records) do
-							if i>1 and t.records[i].buyout > t.records[i-1].buyout*1.5 and
-								quantity > itemVar[matList[mat]]*0.5 then break end
-							
-							total = total + t.records[i].buyout*t.records[i].quantity
-							quantity = quantity + t.records[i].quantity
-							if quantity > itemVar[matList[mat]] then break end
-						end
-						result[mat] = tonumber(string.format("%.2f", (total/quantity)/10000))
-					end
-				end
-			elseif TSM.db.profile.matCostMethod == "auc" and select(4, GetAddOnInfo("Auc-Advanced")) then
-				local itemLink = select(2, GetItemInfo(matList[mat])) or matList[mat]
-				if TSM.db.profile.aucMethod == "appraiser" then
-					local cost = AucAdvanced.Modules.Util.Appraiser.GetPrice(itemLink)
-					if cost then
-						result[mat] = tonumber(string.format("%.2f", cost/10000))
-					end
-				elseif TSM.db.profile.aucMethod == "minBuyout" then
-					local cost = select(6, AucAdvanced.Modules.Util.SimpleAuction.Private.GetItems(itemLink))
-					if cost then
-						result[mat] = tonumber(string.format("%.2f", cost/10000))
-					end
-				else
-					local cost = AucAdvanced.API.GetMarketValue(itemLink)
-					if cost then
-						result[mat] = tonumber(string.format("%.2f", cost/10000))
-					end
-				end
-			end
-			
-			if result[mat] and (not TSM.db.profile.matLock[matList[mat]]) then
-				TSM.db.profile[TSM.mode].mats[matList[mat]].cost = result[mat]
-			end
-		end
-	end
-	
-	-- takes care of the craft prices
-	-- stores the prices in the main TSM.Data table
-	if (scanType == "crafts" or scanType == "full") then
-		for itemID, data in pairs(TSM.Data[TSM.mode].crafts) do
-			t = TSM.db.factionrealm.AucData[itemID]
-			if t and t.records and t.records[1].buyout then
-				sort(t.records, function(a, b) return a.buyout<b.buyout end)
-				data.sell = floor(t.records[1].buyout/10000+0.5)
-				data.posted = t.onlyPlayer
-			else
-				data.posted = 0
-				data.sell = nil
-			end
-		end
-	end
-end
-
 -- deals with the statusbar that shows scan progress while scanning
-function Scan:UpdateStatus(text, progress, bar2)
+function Scan:UpdateStatus(progress, bar2)
 	if not Scan.AHFrame then
 		-- Frame that containes the StatusBar
 		Scan.AHFrame = CreateFrame("Frame", nil, AuctionFrame)
@@ -571,47 +550,43 @@ function Scan:UpdateStatus(text, progress, bar2)
 		Scan.AHFrame:SetFrameStrata("HIGH")
 		
 		-- StatusBar to show the status of the entire scan (the green statusbar)
-		Scan.statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
-		Scan.statusBar:SetOrientation("HORIZONTAL")
-		Scan.statusBar:SetHeight(17)
-		Scan.statusBar:SetWidth(610)
-		Scan.statusBar:SetMinMaxValues(0, 100)
-		Scan.statusBar:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
-		Scan.statusBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
-		Scan.statusBar:SetStatusBarColor(0,100,20, 0.9)
+		statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
+		statusBar:SetOrientation("HORIZONTAL")
+		statusBar:SetHeight(17)
+		statusBar:SetWidth(610)
+		statusBar:SetMinMaxValues(0, 100)
+		statusBar:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
+		statusBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
+		statusBar:SetStatusBarColor(0,100,20, 0.9)
 		
 		-- StatusBar to show the status of scanning the current item (the gray statusbar)
-		Scan.statusBar2 = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
-		Scan.statusBar2:SetOrientation("HORIZONTAL")
-		Scan.statusBar2:SetHeight(17)
-		Scan.statusBar2:SetWidth(610)
-		Scan.statusBar2:SetMinMaxValues(0, 100)
-		Scan.statusBar2:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
-		Scan.statusBar2:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
-		Scan.statusBar2:SetStatusBarColor(200,10,20, 0.5)
-		Scan.statusBar2:SetValue(25)
+		statusBar2 = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
+		statusBar2:SetOrientation("HORIZONTAL")
+		statusBar2:SetHeight(17)
+		statusBar2:SetWidth(610)
+		statusBar2:SetMinMaxValues(0, 100)
+		statusBar2:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
+		statusBar2:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
+		statusBar2:SetStatusBarColor(200,10,20, 0.5)
+		statusBar2:SetValue(25)
 		
 		-- Text for the StatusBar
 		local tFile, tSize = GameFontNormal:GetFont()
-		Scan.statusBar.text = Scan.statusBar:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-		Scan.statusBar.text:SetFont(tFile, tSize, "OUTLINE")
-		Scan.statusBar.text:SetPoint("CENTER")
+		statusBar.text = statusBar:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		statusBar.text:SetFont(tFile, tSize, "OUTLINE")
+		statusBar.text:SetPoint("CENTER")
 	end
 	Scan.AHFrame:Show()
 	
 	-- update the text of the statusBar
-	if text == "" then
-		Scan.statusBar.text:SetText("TradeSkillMaster_AuctionDB - Scanning")
-	elseif text then
-		Scan.statusBar.text:SetText(text)
-	end
+	statusBar.text:SetText("TradeSkillMaster_AuctionDB - Scanning")
 	
 	-- update the value of the main status bar (% filled)
 	if progress then
 		if bar2 then
-			Scan.statusBar2:SetValue(progress)
+			statusBar2:SetValue(progress)
 		else
-			Scan.statusBar:SetValue(progress)
+			statusBar:SetValue(progress)
 		end
 	end
 end
@@ -636,4 +611,58 @@ function Scan:GetTimeDate()
 	end
 	
 	return (t.hour .. ":" .. t.min .. AMPM .. ", " .. date("%a %b %d"))
+end
+
+Scan.gFrame = CreateFrame("Frame")
+Scan.gFrame:Hide()
+Scan.gFrame:SetScript("OnUpdate", function(self)
+		for i=1, 10 do
+			status.page = status.page + 1
+			local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
+			local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
+			Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
+			print(Scan:AddAuctionRecord(link, owner, quantity, bid, buyout))
+			
+			if status.page == self.numShown then
+				self:Hide()
+				Scan:StopScanning()
+			end
+		end
+	end)
+	
+function Scan:StartGetAllScan()
+	status.page = 0
+	print("GETALL SCAN")
+	TSM.db.profile.lastGetAll = time()
+	QueryAuctionItems("", "", "", nil, nil, nil, nil, nil, nil, true)
+	
+	local scanFrame = CreateFrame("Frame")
+	scanFrame:Hide()
+	scanFrame:SetScript("OnUpdate", function(self)
+			for i=1, 10 do
+				status.page = status.page + 1
+				local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
+				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
+				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
+				print(Scan:AddAuctionRecord(link, owner, quantity, bid, buyout))
+				
+				if status.page == self.numShown then
+					self:Hide()
+					Scan:StopScanning()
+				end
+			end
+		end)
+	
+	local	frame1 = CreateFrame("Frame")
+	frame1:Hide()
+	frame1.delay = 5
+	frame1:SetScript("OnUpdate", function(self, elapsed)
+			self.delay = self.delay - elapsed
+			if GetNumAuctionItems("list") > 50 then
+				scanFrame.numShown = GetNumAuctionItems("list")
+				self:Hide()
+				scanFrame:Show()
+			end
+		end)
+	frame1:Show()
 end
