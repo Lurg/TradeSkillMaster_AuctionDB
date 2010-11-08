@@ -54,7 +54,7 @@ end
 function TSM:Lookup(itemID)
 	local name, link = GetItemInfo(itemID)
 	itemID = TSM:GetSafeLink(link)
-	if not TSM.data[itemID] then TSM:Print("No data for that item") end
+	if not TSM.data[itemID] then return TSM:Print("No data for that item") end
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
 	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " ..
