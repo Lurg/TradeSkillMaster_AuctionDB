@@ -58,7 +58,7 @@ function TSM:Lookup(itemID)
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
 	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " ..
-		TSM.data[itemID].quantity .. " times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
+		(TSM.data[itemID].quantity or "???") .. " times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 end
 
 function TSM:SetQuantity(itemID, quantity)
