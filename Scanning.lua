@@ -202,7 +202,7 @@ function Scan.MenuList(self, level)
 				if not select(2, CanSendAuctionQuery()) then
 					local previous = TSM.db.profile.lastGetAll or 1/0
 					if previous > (time() - 15*60) then
-						local diff = time() - previous
+						local diff = previous + 15*60 - time()
 						local diffMin = math.floor(diff/60)
 						local diffSec = diff - diffMin*60
 						return "Ready in " .. diffMin .. "min " .. diffSec .. "sec"
@@ -494,6 +494,7 @@ function Scan:StopScanning(interupted)
 		TSM:Print("Scan complete!")
 		if Scan.AHFrame then 
 			Scan.AHFrame:Hide()
+			print("hidden")
 		end
 		
 		for itemID, data in pairs(Scan.AucData) do
@@ -527,6 +528,7 @@ function Scan:UpdateStatus(progress, bar2)
 		Scan.AHFrame:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.90)
 		Scan.AHFrame:SetPoint("TOPRIGHT", AuctionFrame, "TOPRIGHT", -28, -81)
 		Scan.AHFrame:SetFrameStrata("HIGH")
+		Scan.AHFrame:SetScript("OnShow", function() print("shown") end)
 		
 		-- StatusBar to show the status of the entire scan (the green statusbar)
 		statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
@@ -591,22 +593,6 @@ function Scan:GetTimeDate()
 	
 	return (t.hour .. ":" .. t.min .. AMPM .. ", " .. date("%a %b %d"))
 end
-
-Scan.gFrame = CreateFrame("Frame")
-Scan.gFrame:Hide()
-Scan.gFrame:SetScript("OnUpdate", function(self)
-		for i=1, 10 do
-			status.page = status.page + 1
-			local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
-			local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
-			Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
-			
-			if status.page == self.numShown then
-				self:Hide()
-				Scan:StopScanning()
-			end
-		end
-	end)
 	
 function Scan:StartGetAllScan()
 	status.page = 0
@@ -621,11 +607,13 @@ function Scan:StartGetAllScan()
 				status.page = status.page + 1
 				local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
 				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
+				Scan:AddAuctionRecord(link, owner, quantity, bid, buyout)
 				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
 				
 				if status.page == self.numShown then
 					self:Hide()
 					Scan:StopScanning()
+					break
 				end
 			end
 		end)

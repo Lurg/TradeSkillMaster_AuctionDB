@@ -1,6 +1,7 @@
 -- register this file with Ace Libraries
 local TSM = select(2, ...)
 TSM = LibStub("AceAddon-3.0"):NewAddon(TSM, "TradeSkillMaster_AuctionDB", "AceEvent-3.0", "AceConsole-3.0")
+local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
 
 TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Version") -- current version of the addon
 
@@ -26,6 +27,7 @@ function TSM:OnInitialize()
 	TSM.Scan = TSM.modules.Scan
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_Crafting", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
+	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
@@ -57,8 +59,8 @@ function TSM:Lookup(itemID)
 	if not TSM.data[itemID] then return TSM:Print("No data for that item") end
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
-	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " ..
-		(TSM.data[itemID].quantity or "???") .. " times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
+	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " .. (TSM.data[itemID].quantity or "???") ..
+		" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 end
 
 function TSM:SetQuantity(itemID, quantity)
@@ -120,9 +122,8 @@ function TSM:Serialize()
 	for id, v in pairs(TSM.data) do
 		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean ..
 			"," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.lastSeen ..
-			"," .. ((not v.filtered and "f") or (v.filtered and "t")) .. "," .. v.quantity)
+			"," .. ((not v.filtered and "f") or (v.filtered and "t")) .. "," .. (v.quantity or 0))
 	end
-	TSM.db.factionrealm.scanData = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
 
@@ -131,4 +132,67 @@ function TSM:Deserialize(data)
 	for k,a,b,c,d,e,f,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
 		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),dTimeResidual=tonumber(e),dTimeResidualI=tonumber(f),lastSeen=tonumber(g), filtered=(h == "t"), quantity=tonumber(i)}
 	end
+end
+
+function TSM:LoadGUI(parent)
+	--Truncate will leave off silver or copper if gold is greater than 100.
+	local function CopperToGold(c)
+		local GOLD_TEXT = "\124cFFFFD700g\124r"
+		local SILVER_TEXT = "\124cFFC7C7CFs\124r"
+		local COPPER_TEXT = "\124cFFEDA55Fc\124r"
+		local g = floor(c/10000)
+		local s = floor(mod(c/100,100))
+		c = floor(mod(c, 100))
+		local moneyString = ""
+		if g > 0 then
+			moneyString = string.format("%d%s", g, GOLD_TEXT)
+		end
+		if s > 0 and (g < 100) then
+			moneyString = string.format("%s%d%s", moneyString, s, SILVER_TEXT)
+		end
+		if c > 0 and (g < 100) then
+			moneyString = string.format("%s%d%s", moneyString, c, COPPER_TEXT)
+		end
+		if moneyString == "" then moneyString = "0"..COPPER_TEXT end
+		return moneyString
+	end
+
+	local container = AceGUI:Create("SimpleGroup")
+	container:SetLayout("list")
+	parent:AddChild(container)
+	
+	local spacer = AceGUI:Create("Label")
+	spacer:SetFullWidth(true)
+	spacer:SetText(" ")
+	container:AddChild(spacer)
+	
+	local text = AceGUI:Create("Label")
+	text:SetFullWidth(true)
+	text:SetFontObject(GameFontNormalLarge)
+	container:AddChild(text)
+	
+	local editBox = AceGUI:Create("EditBox")
+	editBox:SetWidth(200)
+	editBox:SetLabel("Item Lookup:")
+	editBox:SetCallback("OnEnterPressed", function(_, _, value)
+			if not value then return TSM:Print("No data for that item") end
+			local itemID
+			local name, link = GetItemInfo(value)
+			if not link then
+				for ID in pairs(TSM.data) do
+					local name = GetItemInfo(ID)
+					if name == value then
+						itemID = ID
+					end
+				end
+			else
+				itemID = TSM:GetSafeLink(link)
+			end
+			if not TSM.data[itemID] then return TSM:Print("No data for that item") end
+			local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+			local value = CopperToGold(TSM.data[itemID].correctedMean)
+			text:SetText(name .. " has a market value of " .. value .. " and was seen " .. (TSM.data[itemID].quantity or "???") ..
+				" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
+		end)
+	container:AddChild(editBox, text)
 end
