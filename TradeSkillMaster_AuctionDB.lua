@@ -118,6 +118,6 @@ end
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,correctedMean,d,e,filtered,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,lastSeen=g, filtered=(h == "t"), quantity=i}
+		TSM.data[tonumber(k)] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,lastSeen=g, filtered=(h == "t"), quantity=i}
 	end
 end
