@@ -412,11 +412,6 @@ function Scan:ScanAuctions()
 		local link = TSM:GetSafeLink(GetAuctionItemLink("list", i))
 		Scan:AddAuctionRecord(link, owner[i], quantity[i], bid[i], buyout[i])
 	end
-	
-	-- we are done scanning so add this data to the main table
-	if (status.page == 0 and shown == 0) then
-		Scan:AddAuctionRecord(link, "", 0, 0, 0.1)
-	end
 
 	-- This query has more pages to scan
 	-- increment the page # and send the new query
@@ -453,7 +448,7 @@ end
 -- Add a new record to the Scan.AucData table
 function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 	-- Don't add this data if it has no buyout
-	if (not buyout) or (buyout <= 0) then return "No buyout" end
+	if (not buyout) or (buyout <= 0) then return end
 	
 	if buyout > 1 then
 		TSM:OneIteration(buyout/quantity, itemID)
@@ -479,15 +474,13 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 			record.owner = owner
 			record.quantity = record.quantity + quantity
 			record.isPlayer = (owner==select(1,UnitName("player")))
-			return "updated"
+			return
 		end
 	end
 	
 	-- Create a new entry in the table
 	tinsert(Scan.AucData[itemID].records, {owner = owner, buyout = buyout, bid = bid,
 		isPlayer = (owner==select(1,UnitName("player"))), quantity = quantity})
-		
-	return "Added"
 end
 
 -- stops the scan because it was either interupted or it was completed successfully
@@ -607,7 +600,6 @@ Scan.gFrame:SetScript("OnUpdate", function(self)
 			local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
 			local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
 			Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
-			print(Scan:AddAuctionRecord(link, owner, quantity, bid, buyout))
 			
 			if status.page == self.numShown then
 				self:Hide()
