@@ -6,3 +6,4 @@
 ## SavedVariables: TradeSkillMaster_AuctionDBDB
 
 TradeSkillMaster_AuctionDB.lua
+Scanning.lua

@@ -11,6 +11,9 @@ local savedDBDefaults = {
 		scanData = "",
 		time = 0,
 	},
+	profile = {
+		scanSelections = {},
+	},
 }
 
 -- Called once the player has loaded WOW.
@@ -20,96 +23,20 @@ function TSM:OnInitialize()
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
+	TSM.Scan = TSM.modules.Scan
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_Crafting", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
-	TSMAPI:RegisterSlashCommand("adbstart", TSM.Start, "starts collecting data on auctions seen", true)
-	TSMAPI:RegisterSlashCommand("adbstop", TSM.Stop, "stops collecting data on auctions seen", true)
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
-	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "looks up the market value for an item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 	
-	TSM:Start()
+	TSM:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 end
 
 function TSM:OnDisable()
 	local sTime = GetTime()
 	TSM:Serialize(TSM.data)
 	TSM.db.factionrealm.time = GetTime() - sTime
-end
-
-function TSM:Start()
-	TSM:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	TSM:Print("Started")
-end
-
-local delay = CreateFrame("Frame")
-delay.time = 0
-delay.retries = 3
-delay.retryItems = {}
-delay:SetScript("OnShow", function(self) self.time = BASE_DELAY end)
-delay:SetScript("OnUpdate", function(self, elapsed)
-		self.time = self.time - elapsed
-		if self.time <= 0 then
-			TSM:ScanAuctions()
-			self:Hide()
-		end
-	end)
-delay:Hide()
-
-function TSM:AUCTION_ITEM_LIST_UPDATE()
-	TSM:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	TSM:ScanAuctions()
-	TSM:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-end
-
--- scans the currently shown page of auctions and collects all the data
-function TSM:ScanAuctions()
-	if #(delay.retryItems) > 0 then
-		local retry = false
-		for _, i in pairs(delay.retryItems) do
-			local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", i)
-			if name and buyout then
-				-- this is good data so save it!
-				i = nil
-			else
-				retry = true
-			end
-		end
-		if retry and delay.retries > 0 then
-			delay.retries = delay.retries - 1
-			delay:Show()
-		else
-			delay.retries = 3
-		end
-		return
-	end
-	local sTime = GetTime()
-
-	for i=1, GetNumAuctionItems("list") do
-		-- checks whether or not the name and owner of the auctions are valid
-		-- if either are invalid, the data is bad
-		local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", i)
-		if name and buyout then
-			-- this data is valid
-			TSM:OneIteration(buyout/quantity, TSM:GetSafeLink(GetAuctionItemLink("list", i)))
-		else
-			tinsert(delay.retryItems, i)
-		end
-	end
-	
-	if #(delay.retryItems) > 0 then
-		delay:Show()
-		delay.retries = 3
-	end
-end
-
-function TSM:Stop()
-	TSM:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	for i, v in pairs(TSM.data) do
-		print("index = " .. i)
-		foreach(v, function(a, b) if a == "uncorrectedMean" or a == "correctedMean" then print(a, TSM:FormatTextMoney(b)) else print(a, b) end end)
-	end
 end
 
 function TSM:Reset()
@@ -119,33 +46,22 @@ function TSM:Reset()
 	print("Reset Data")
 end
 
-function TSM:Lookup(link)
-	local name, nLink = GetItemInfo(link)
-	if not name then
-		TSM:Print("Invalid item \"" .. link .. "\". Check your spelling or try using an item link instead of the name.")
-		return
-	end
-	
-	local itemID = TSM:GetSafeLink(nLink)
-	if itemID and TSM.data[itemID] then
-		TSM:Print("The market value of " .. name .. " is " .. TSM:FormatTextMoney(TSM.data[itemID].correctedMean) ..
-			" and the item has been seen " .. TSM.data[itemID].n .. " times.")
-	else
-		TSM:Print("No data for " .. name)
-	end
+function TSM:GetData(itemID)
+	if not TSM.data[itemID] then return end
+	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev
 end
 
-function TSM:GetData(itemID, extra)
-	if not TSM.data[itemID] then return end
-	return TSM.data[itemID].correctedMean, TSM.data[itemID].n
+function TSM:SetQuantity(itemID, quantity)
+	TSM.data[itemID].quantity = quantity
 end
 
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
-	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, dTimeResidual=0, dTimeResidualI=0, timeLeft=time(), filtered=false}
+	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, dTimeResidual=0, dTimeResidualI=0, lastSeen=time(), filtered=false}
 	local item = TSM.data[itemID]
 	item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
-	local dTime = time() - item.timeLeft
-	item.timeLeft = time()
+	local dTime = time() - item.lastSeen
+	item.lastSeen = time()
 	if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
 		dTime = item.dTimeResidual * math.exp(-item.dTimeResidualI)
 		item.dTimeResidualI = item.dTimeResidualI + 1
@@ -187,43 +103,13 @@ function TSM:GetSafeLink(link)
 	if not link then return end
 	local s, e = string.find(link, "|H(.-):([-0-9]+)")
 	local fLink = string.sub(link, s+7, e)
-	return tonumber(fLink) or fLink
-end
-
--- Stolen from Tekkub!
-local GOLD_TEXT = "|cffffd700g|r"
-local SILVER_TEXT = "|cffc7c7cfs|r"
-local COPPER_TEXT = "|cffeda55fc|r"
-
--- Truncates to save space: after 10g stop showing copper, after 100g stop showing silver
-function TSM:FormatTextMoney(money)
-	local gold = math.floor(money / COPPER_PER_GOLD)
-	local silver = math.floor((money - (gold * COPPER_PER_GOLD)) / COPPER_PER_SILVER)
-	local copper = math.floor(math.fmod(money, COPPER_PER_SILVER))
-	local text = ""
-	
-	-- Add gold
-	if gold>0 then
-		text = string.format("%d%s ", gold, GOLD_TEXT)
-	end
-	
-	-- Add silver
-	if silver>0 and gold<100 then
-		text = string.format("%s%d%s ", text, silver, SILVER_TEXT)
-	end
-	
-	-- Add copper if we have no silver/gold found, or if we actually have copper
-	if text == "" or (copper>0 and gold<=10) then
-		text = string.format("%s%d%s ", text, copper, COPPER_TEXT)
-	end
-	
-	return string.trim(text)
+	return tonumber(fLink)
 end
 
 function TSM:Serialize()
 	local results = {}
 	for id, v in pairs(TSM.data) do
-		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean .. "," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.timeLeft .. "," .. ((not v.filtered and "f") or (v.filtered and "t")))
+		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean .. "," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.lastSeen .. "," .. ((not v.filtered and "f") or (v.filtered and "t")))
 	end
 	TSM.db.factionrealm.scanData = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
@@ -232,6 +118,6 @@ end
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,correctedMean,d,e,filtered,g,h in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,timeLeft=g, filtered=(h == "t")}
+		TSM.data[k] = {n=a,uncorrectedMean=b,correctedMean=correctedMean,M2=d,dTimeResidual=e,dTimeResidualI=filtered,lastSeen=g, filtered=(h == "t")}
 	end
 end
