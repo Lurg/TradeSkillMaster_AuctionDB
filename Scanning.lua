@@ -644,7 +644,6 @@ function Scan:StartGetAllScan()
 				local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
 				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
 				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
-				print(Scan:AddAuctionRecord(link, owner, quantity, bid, buyout))
 				
 				if status.page == self.numShown then
 					self:Hide()
