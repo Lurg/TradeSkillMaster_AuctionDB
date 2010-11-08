@@ -377,7 +377,6 @@ function Scan:ScanAuctions()
 		end
 		
 		if badData then
-			print("BAD DATA")
 			if status.hardRetry then
 				-- Hard retry
 				-- re-sends the entire query
@@ -412,20 +411,7 @@ function Scan:ScanAuctions()
 	for i=1, shown do
 		local link = TSM:GetSafeLink(GetAuctionItemLink("list", i))
 		Scan:AddAuctionRecord(link, owner[i], quantity[i], bid[i], buyout[i])
-		
-		if status.isScanning == "GetAll" then
-			Scan:UpdateStatus(floor(1-(shown-i)*100 + 0.5))
-			print(i)
-		end
 	end
-	
-	if status.isScanning == "GetAll" then
-		-- we are done scanning!
-		Scan:StopScanning()
-		return
-	end
-	
-	print("NOOO")
 	
 	-- we are done scanning so add this data to the main table
 	if (status.page == 0 and shown == 0) then
