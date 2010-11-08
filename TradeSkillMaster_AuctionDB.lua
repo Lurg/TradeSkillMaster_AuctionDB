@@ -27,6 +27,7 @@ function TSM:OnInitialize()
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_Crafting", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
+	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 end
@@ -48,6 +49,16 @@ function TSM:GetData(itemID)
 	if not TSM.data[itemID] then return end
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev
+end
+
+function TSM:Lookup(itemID)
+	local name, link = GetItemInfo(itemID)
+	itemID = TSM:GetSafeLink(link)
+	if not TSM.data[itemID] then TSM:Print("No data for that item") end
+	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
+	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " ..
+		TSM.data[itemID].quantity .. " times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 end
 
 function TSM:SetQuantity(itemID, quantity)
