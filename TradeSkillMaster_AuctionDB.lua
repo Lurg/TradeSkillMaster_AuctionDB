@@ -73,14 +73,14 @@ function TSM:SetQuantity(itemID, quantity)
 end
 
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
-	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, dTimeResidual=0, dTimeResidualI=0, lastSeen=time(), filtered=false}
+	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, --[[dTimeResidual=0, dTimeResidualI=0,]] lastSeen=time(), filtered=false}
 	local item = TSM.data[itemID]
 	item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
 	local dTime = time() - item.lastSeen
-	if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
+	--[[if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
 		dTime = item.dTimeResidual * math.exp(-item.dTimeResidualI)
 		item.dTimeResidualI = item.dTimeResidualI + 1
-	end
+	end]]
 	local delta = x - item.uncorrectedMean
 	item.uncorrectedMean = item.uncorrectedMean + delta/item.n
 	item.M2 = item.M2 + delta*(x - item.uncorrectedMean)
@@ -88,14 +88,19 @@ function TSM:OneIteration(x, itemID) -- x is the market price in the current ite
 	if item.n ~= 1 then
 		stdDev = math.sqrt(item.M2/(item.n - 1))
 	end
-	if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
+	--[[if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
 		item.dTimeResidual = dTime
 		item.dTimeResidualI = 1
+	end]]
+	local c = 1.5
+	if stdDev ~= nil and stdDev ~= 0 then -- some more filtering just to make sure anyone trying to reset a market
+		if stdDev > 2*item.correctedMean then c = 1 end -- doesn't get through to us!
+		if stdDev > 4*item.correctedMean then c = 0.7 end
 	end
 	if stdDev==nil or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
 		item.correctedMean = item.uncorrectedMean
 		if item.n == 2 then item.filtered = true end
-	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev + item.correctedMean) > x and (item.correctedMean - stdDev) < x and item.n > 2) or item.filtered then
+	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev*c + item.correctedMean) > x and (item.correctedMean - stdDev*c) < x and item.n > 2) or item.filtered then
 		local w = TSM:GetWeight(dTime, item.n)
 		item.correctedMean = w*item.correctedMean + (1-w)*x
 		if stdDev > 1.5*math.abs(item.correctedMean - x) then item.filtered = false end
@@ -125,16 +130,16 @@ function TSM:Serialize()
 	local results = {}
 	for id, v in pairs(TSM.data) do
 		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean ..
-			"," .. v.M2 .. "," .. v.dTimeResidual .. "," .. v.dTimeResidualI .. "," .. v.lastSeen ..
-			"," .. ((not v.filtered and "f") or (v.filtered and "t")) .. "," .. (v.quantity or 0))
+			"," .. v.M2 .. "," .. v.lastSeen .. "," ..
+			((not v.filtered and "f") or (v.filtered and "t")) .. "," .. (v.quantity or 0))
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
 
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
-	for k,a,b,c,d,e,f,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),dTimeResidual=tonumber(e),dTimeResidualI=tonumber(f),lastSeen=tonumber(g), filtered=(h == "t"), quantity=tonumber(i)}
+	for k,a,b,c,d,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
+		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),lastSeen=tonumber(g), filtered=(h == "t"), quantity=tonumber(i)}
 	end
 end
 
