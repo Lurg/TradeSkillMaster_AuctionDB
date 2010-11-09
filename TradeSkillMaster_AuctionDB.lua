@@ -19,18 +19,23 @@ local savedDBDefaults = {
 
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
-	local sTime = GetTime()
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
-	TSM:Deserialize(TSM.db.factionrealm.scanData)
-	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	TSM.Scan = TSM.modules.Scan
+	
+	TSM:Deserialize(TSM.db.factionrealm.scanData)
+	TSM.playerAuctions = {}
+	
+	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
+	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_Crafting", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
+	TSMAPI:RegisterData("playerAuctions", TSM.GetPlayerAuctions)
+	
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 end
 
@@ -195,4 +200,17 @@ function TSM:LoadGUI(parent)
 				" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 		end)
 	container:AddChild(editBox, text)
+end
+
+function TSM:ScanPlayerAuctions()
+	for i=1, GetNumAuctionItems("owner") do
+		local itemID = TSM:GetSafeLink(GetAuctionItemLink("owner", i))
+		local quantity = select(3, GetAuctionItemInfo("owner", i))
+		TSM.playerAuctions[itemID] = (TSM.playerAuctions[itemID] or 0) + quantity
+	end
+end
+
+function TSM:GetPlayerAuctions(itemID)
+	if not itemID then return "Invalid argument" end
+	return TSM.playerAuctions[itemID] or 0
 end
