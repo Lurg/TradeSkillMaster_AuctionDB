@@ -77,7 +77,6 @@ function TSM:OneIteration(x, itemID) -- x is the market price in the current ite
 	local item = TSM.data[itemID]
 	item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
 	local dTime = time() - item.lastSeen
-	item.lastSeen = time()
 	if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
 		dTime = item.dTimeResidual * math.exp(-item.dTimeResidualI)
 		item.dTimeResidualI = item.dTimeResidualI + 1
@@ -96,7 +95,7 @@ function TSM:OneIteration(x, itemID) -- x is the market price in the current ite
 	if stdDev==nil or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
 		item.correctedMean = item.uncorrectedMean
 		if item.n == 2 then item.filtered = true end
-	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev + item.correctedMean) > x and (item.correctedMean - stdDev) < x and item.n > 2) or (item.filtered) then
+	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev + item.correctedMean) > x and (item.correctedMean - stdDev) < x and item.n > 2) or item.filtered then
 		local w = TSM:GetWeight(dTime, item.n)
 		item.correctedMean = w*item.correctedMean + (1-w)*x
 		if stdDev > 1.5*math.abs(item.correctedMean - x) then item.filtered = false end

@@ -494,11 +494,11 @@ function Scan:StopScanning(interupted)
 		TSM:Print("Scan complete!")
 		if Scan.AHFrame then 
 			Scan.AHFrame:Hide()
-			print("hidden")
 		end
 		
 		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
+			TSM.data[itemID].lastSeen = time()
 		end
 	end
 	
@@ -528,7 +528,6 @@ function Scan:UpdateStatus(progress, bar2)
 		Scan.AHFrame:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.90)
 		Scan.AHFrame:SetPoint("TOPRIGHT", AuctionFrame, "TOPRIGHT", -28, -81)
 		Scan.AHFrame:SetFrameStrata("HIGH")
-		Scan.AHFrame:SetScript("OnShow", function() print("shown") end)
 		
 		-- StatusBar to show the status of the entire scan (the green statusbar)
 		statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
@@ -596,7 +595,6 @@ end
 	
 function Scan:StartGetAllScan()
 	status.page = 0
-	print("GETALL SCAN")
 	TSM.db.profile.lastGetAll = time()
 	QueryAuctionItems("", "", "", nil, nil, nil, nil, nil, nil, true)
 	
