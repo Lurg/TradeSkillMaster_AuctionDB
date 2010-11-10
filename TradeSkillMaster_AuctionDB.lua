@@ -131,7 +131,7 @@ function TSM:Serialize()
 	for id, v in pairs(TSM.data) do
 		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean ..
 			"," .. v.M2 .. "," .. v.lastSeen .. "," ..
-			((not v.filtered and "f") or (v.filtered and "t")) .. "," .. (v.quantity or 0))
+			((not v.filtered and "0") or (v.filtered and "1")) .. "," .. (v.quantity or 0))
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
@@ -139,7 +139,7 @@ end
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,c,d,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),lastSeen=tonumber(g), filtered=(h == "t"), quantity=tonumber(i)}
+		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),lastSeen=tonumber(g), filtered=(h == "1" or h == "t"), quantity=tonumber(i)}
 	end
 end
 
