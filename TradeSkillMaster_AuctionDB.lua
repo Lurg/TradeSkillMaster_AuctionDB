@@ -29,7 +29,7 @@ function TSM:OnInitialize()
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
 
-	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_Crafting", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
+	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)

@@ -4,6 +4,7 @@
 ## Author: Sapu94, Mischanix
 ## Version: r@file-revision@
 ## SavedVariables: TradeSkillMaster_AuctionDBDB
+## Dependency: TradeSkillMaster
 
 TradeSkillMaster_AuctionDB.lua
 Scanning.lua
