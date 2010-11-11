@@ -60,7 +60,7 @@ end
 
 function TSM:Lookup(itemID)
 	local name, link = GetItemInfo(itemID)
-	itemID = TSM:GetSafeLink(link)
+	itemID = TSMAPI:GetItemID(link)
 	if not TSM.data[itemID] then return TSM:Print("No data for that item") end
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
@@ -117,13 +117,6 @@ function TSM:GetWeight(dTime, i)
 	local s = 14*24*60*60 -- 2 weeks
 	local k = -s/(math.log(i/2)/math.log(0.5))
 	return (i-i^(dTime/(dTime + k)))/i
-end
-
-function TSM:GetSafeLink(link)
-	if not link then return end
-	local s, e = string.find(link, "|H(.-):([-0-9]+)")
-	local fLink = string.sub(link, s+7, e)
-	return tonumber(fLink)
 end
 
 function TSM:Serialize()
@@ -195,7 +188,7 @@ function TSM:LoadGUI(parent)
 					end
 				end
 			else
-				itemID = TSM:GetSafeLink(link)
+				itemID = TSMAPI:GetItemID(link)
 			end
 			if not TSM.data[itemID] then return TSM:Print("No data for that item") end
 			local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
@@ -208,7 +201,7 @@ end
 
 function TSM:ScanPlayerAuctions()
 	for i=1, GetNumAuctionItems("owner") do
-		local itemID = TSM:GetSafeLink(GetAuctionItemLink("owner", i))
+		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("owner", i))
 		local quantity = select(3, GetAuctionItemInfo("owner", i))
 		TSM.playerAuctions[itemID] = (TSM.playerAuctions[itemID] or 0) + quantity
 	end

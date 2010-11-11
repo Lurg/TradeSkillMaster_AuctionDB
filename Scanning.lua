@@ -409,7 +409,7 @@ function Scan:ScanAuctions()
 	-- now that we know our query is good, time to verify and then store our data
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
-		local link = TSM:GetSafeLink(GetAuctionItemLink("list", i))
+		local link = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
 		Scan:AddAuctionRecord(link, owner[i], quantity[i], bid[i], buyout[i])
 	end
 
@@ -603,7 +603,7 @@ function Scan:StartGetAllScan()
 	scanFrame:SetScript("OnUpdate", function(self)
 			for i=1, 10 do
 				status.page = status.page + 1
-				local link = TSM:GetSafeLink(GetAuctionItemLink("list", status.page))
+				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
 				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
 				Scan:AddAuctionRecord(link, owner, quantity, bid, buyout)
 				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
