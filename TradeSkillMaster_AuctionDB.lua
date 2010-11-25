@@ -35,6 +35,7 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSMAPI:RegisterData("playerAuctions", TSM.GetPlayerAuctions)
+	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
 	
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 end
@@ -212,4 +213,9 @@ end
 function TSM:GetPlayerAuctions(itemID)
 	if not itemID then return "Invalid argument" end
 	return TSM.playerAuctions[itemID] or 0
+end
+
+function TSM:GetSeenCount(itemID)
+	if not TSM.data[itemID] then return end
+	return TSM.data[itemID].n
 end
