@@ -9,6 +9,7 @@ local BASE_DELAY = 0.05
 
 local savedDBDefaults = {
 	factionrealm = {
+		playerAuctions = {},
 		scanData = "",
 		time = 0,
 	},
@@ -24,7 +25,7 @@ function TSM:OnInitialize()
 	TSM.Scan = TSM.modules.Scan
 	
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
-	TSM.playerAuctions = {}
+	TSM.playerAuctions = TSM.db.factionrealm.playerAuctions
 	
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
@@ -203,6 +204,13 @@ function TSM:LoadGUI(parent)
 end
 
 function TSM:ScanPlayerAuctions()
+	for itemID in pairs(TSM.playerAuctions) do
+		if type(itemID) == "number" then
+			TSM.playerAuctions[itemID] = 0
+		end
+	end
+	TSM.playerAuctions.time = GetTime()
+	
 	for i=1, GetNumAuctionItems("owner") do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("owner", i))
 		local quantity = select(3, GetAuctionItemInfo("owner", i))
@@ -212,6 +220,7 @@ end
 
 function TSM:GetPlayerAuctions(itemID)
 	if not itemID then return "Invalid argument" end
+	if (GetTime() - TSM.playerAuctions.time) > (60*60) then return 0 end -- data is too old
 	return TSM.playerAuctions[itemID] or 0
 end
 
