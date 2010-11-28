@@ -454,7 +454,7 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 		TSM:OneIteration(buyout/quantity, itemID)
 	end
 
-	Scan.AucData[itemID] = Scan.AucData[itemID] or {quantity = 0, onlyPlayer = 0, records = {}}
+	Scan.AucData[itemID] = Scan.AucData[itemID] or {quantity = 0, onlyPlayer = 0, records = {}, minBuyout=0}
 	Scan.AucData[itemID].quantity = Scan.AucData[itemID].quantity + quantity
 
 	-- Keeps track of how many the player has on the AH
@@ -465,6 +465,10 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 	-- Calculate the bid / buyout per 1 item
 	buyout = buyout / quantity
 	bid = bid / quantity
+	
+	if (buyout < Scan.AucData[itemID].minBuyout or Scan.AucData[itemID].minBuyout == 0) then
+		Scan.AucData[itemID].minBuyout = buyout
+	end
 	
 	-- No sense in using a record for each entry if they are all the exact same data
 	for _, record in pairs(Scan.AucData[itemID].records) do
@@ -499,6 +503,7 @@ function Scan:StopScanning(interupted)
 		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
 			TSM.data[itemID].lastSeen = time()
+			TSM.data[itemID].minBuyout = data.minBuyout
 		end
 	end
 	

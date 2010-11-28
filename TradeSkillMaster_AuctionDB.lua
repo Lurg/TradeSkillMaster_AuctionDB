@@ -59,7 +59,7 @@ function TSM:GetData(itemID)
 	itemID = TSMAPI:GetNewGem(itemID) or itemID
 	if not TSM.data[itemID] then return end
 	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
-	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev
+	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev, TSM.data[itemID].minBuyout
 end
 
 function TSM:Lookup(itemID)
@@ -128,15 +128,15 @@ function TSM:Serialize()
 	for id, v in pairs(TSM.data) do
 		tinsert(results, "d" .. id .. "," .. v.n .. "," .. v.uncorrectedMean .. "," .. v.correctedMean ..
 			"," .. v.M2 .. "," .. v.lastSeen .. "," ..
-			((not v.filtered and "0") or (v.filtered and "1")) .. "," .. (v.quantity or 0))
+			((not v.filtered and "0") or (v.filtered and "1")) .. "," .. (v.quantity or 0) .. "," .. (v.minBuyout or "n"))
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
 
 function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
-	for k,a,b,c,d,g,h,i in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),lastSeen=tonumber(g), filtered=(h == "1" or h == "t"), quantity=tonumber(i)}
+	for k,a,b,c,d,g,h,i,j in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
+		TSM.data[tonumber(k)] = {n=tonumber(a),uncorrectedMean=tonumber(b),correctedMean=tonumber(c),M2=tonumber(d),lastSeen=tonumber(g),filtered=(h == "1" or h == "t"),quantity=tonumber(i),minBuyout=tonumber(j)}
 	end
 end
 
