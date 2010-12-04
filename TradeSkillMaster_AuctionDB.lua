@@ -214,7 +214,7 @@ function TSM:ScanPlayerAuctions()
 	for i=1, GetNumAuctionItems("owner") do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("owner", i))
 		local _, _, quantity, _, _, _, _, _, _, _, _, _, wasSold = GetAuctionItemInfo("owner", i)
-		if not wasSold then
+		if wasSold == 0 then
 			TSM.playerAuctions[itemID] = (TSM.playerAuctions[itemID] or 0) + quantity
 		end
 	end
