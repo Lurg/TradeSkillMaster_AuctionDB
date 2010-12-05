@@ -35,7 +35,8 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
 	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
 	TSMAPI:RegisterData("market", TSM.GetData)
-	TSMAPI:RegisterData("playerAuctions", TSM.GetPlayerAuctions)
+	TSMAPI:RegisterData("playerauctions", TSM.GetPlayerAuctions)
+	TSMAPI:RegisterData("auctionplayers", TSM.GetPlayers)
 	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
 	
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
@@ -220,6 +221,14 @@ function TSM:ScanPlayerAuctions()
 			TSM.playerAuctions[currentPlayer][itemID] = (TSM.playerAuctions[currentPlayer][itemID] or 0) + quantity
 		end
 	end
+end
+
+function TSM:GetPlayers()
+	local temp = {}
+	for name in pairs(TSM.playerAuctions) do
+		tinsert(temp, name)
+	end
+	return temp
 end
 
 function TSM:GetPlayerAuctions(itemID, player)
