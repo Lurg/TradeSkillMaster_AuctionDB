@@ -607,7 +607,6 @@ function Scan:StartGetAllScan()
 	scanFrame:Hide()
 	scanFrame:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
-			local s = GetTime()
 			for i=1, 200 do
 				status.page = status.page + 1
 				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
@@ -621,7 +620,6 @@ function Scan:StartGetAllScan()
 					break
 				end
 			end
-			print(elapsed, GetTime() - s)
 		end)
 	
 	local	frame1 = CreateFrame("Frame")
