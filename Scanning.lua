@@ -605,8 +605,10 @@ function Scan:StartGetAllScan()
 	
 	local scanFrame = CreateFrame("Frame")
 	scanFrame:Hide()
-	scanFrame:SetScript("OnUpdate", function(self)
-			for i=1, 10 do
+	scanFrame:SetScript("OnUpdate", function(self, elapsed)
+			if not AuctionFrame:IsVisible() then self:Hide() end
+			local s = GetTime()
+			for i=1, 200 do
 				status.page = status.page + 1
 				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
 				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
@@ -619,12 +621,14 @@ function Scan:StartGetAllScan()
 					break
 				end
 			end
+			print(elapsed, GetTime() - s)
 		end)
 	
 	local	frame1 = CreateFrame("Frame")
 	frame1:Hide()
 	frame1.delay = 5
 	frame1:SetScript("OnUpdate", function(self, elapsed)
+			if not AuctionFrame:IsVisible() then self:Hide() end
 			self.delay = self.delay - elapsed
 			if GetNumAuctionItems("list") > 50 then
 				scanFrame.numShown = GetNumAuctionItems("list")
