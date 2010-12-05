@@ -204,26 +204,29 @@ function TSM:LoadGUI(parent)
 end
 
 function TSM:ScanPlayerAuctions()
-	for itemID in pairs(TSM.playerAuctions) do
+	local currentPlayer = UnitName("player")
+	TSM.playerAuctions[currentPlayer] = TSM.playerAuctions[currentPlayer] or {}
+	for itemID in pairs(TSM.playerAuctions[currentPlayer]) do
 		if type(itemID) == "number" then
-			TSM.playerAuctions[itemID] = 0
+			TSM.playerAuctions[currentPlayer][itemID] = 0
 		end
 	end
-	TSM.playerAuctions.time = GetTime()
+	TSM.playerAuctions[currentPlayer].time = GetTime()
 	
 	for i=1, GetNumAuctionItems("owner") do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("owner", i))
 		local _, _, quantity, _, _, _, _, _, _, _, _, _, wasSold = GetAuctionItemInfo("owner", i)
 		if wasSold == 0 then
-			TSM.playerAuctions[itemID] = (TSM.playerAuctions[itemID] or 0) + quantity
+			TSM.playerAuctions[currentPlayer][itemID] = (TSM.playerAuctions[currentPlayer][itemID] or 0) + quantity
 		end
 	end
 end
 
-function TSM:GetPlayerAuctions(itemID)
+function TSM:GetPlayerAuctions(itemID, player)
 	if not itemID then return "Invalid argument" end
-	if (GetTime() - (TSM.playerAuctions.time or 0)) > (60*60) then return 0 end -- data is too old
-	return TSM.playerAuctions[itemID] or 0
+	player = player or UnitName("player")
+	if not TSM.playerAuctions[player] or (GetTime() - (TSM.playerAuctions[player].time or 0)) > (60*60) then return 0 end -- data is too old
+	return TSM.playerAuctions[player][itemID] or 0
 end
 
 function TSM:GetSeenCount(itemID)
