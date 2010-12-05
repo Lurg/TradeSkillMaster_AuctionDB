@@ -225,7 +225,7 @@ end
 function TSM:GetPlayerAuctions(itemID, player)
 	if not itemID then return "Invalid argument" end
 	player = player or UnitName("player")
-	if not TSM.playerAuctions[player] or (GetTime() - (TSM.playerAuctions[player].time or 0)) > (60*60) then return 0 end -- data is too old
+	if not TSM.playerAuctions[player] or (GetTime() - (TSM.playerAuctions[player].time or 0)) > (48*60*60) then return 0 end -- data is old
 	return TSM.playerAuctions[player][itemID] or 0
 end
 
