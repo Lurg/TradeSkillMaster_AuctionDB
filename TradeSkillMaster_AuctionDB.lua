@@ -118,7 +118,7 @@ function TSM:GetWeight(dTime, i)
 	--   to cut down on processing time.  Also note that as i -> 2, k -> negative infinity
 	--   so we'd like to avoid i <= 2
 	if dTime < 3600 then return (i-1)/i end
-	local s = 14*24*60*60 -- 2 weeks
+	local s = 5*24*60*60 -- 5 days
 	local k = -s/(math.log(i/2)/math.log(0.5))
 	return (i-i^(dTime/(dTime + k)))/i
 end
