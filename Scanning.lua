@@ -361,17 +361,17 @@ function Scan:ScanAuctions()
 		-- # of pages total
 	local shown, total = GetNumAuctionItems("list")
 	local totalPages = math.ceil(total / 50)
-	local name, quantity, bid, buyout, owner = {}, {}, {}, {}, {}
+	local name, quantity, bid, buyout = {}, {}, {}, {}
 	
 	-- Check for bad data
 	if status.retries < 3 then
 		local badData
 		
 		for i=1, shown do
-			-- checks whether or not the name and owner of the auctions are valid
-			-- if either are invalid, the data is bad
-			name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i], _, _, owner[i] = GetAuctionItemInfo("list", i)
-			if not (name[i] and owner[i]) then
+			-- checks whether or not the name of the auctions are valid
+			-- if not, the data is bad
+			name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i] = GetAuctionItemInfo("list", i)
+			if not name[i] then
 				badData = true
 			end
 		end
@@ -410,7 +410,7 @@ function Scan:ScanAuctions()
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
 		local link = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		Scan:AddAuctionRecord(link, owner[i], quantity[i], bid[i], buyout[i])
+		Scan:AddAuctionRecord(link, quantity[i], bid[i], buyout[i])
 	end
 
 	-- This query has more pages to scan
@@ -446,7 +446,7 @@ function Scan:ScanAuctions()
 end
 
 -- Add a new record to the Scan.AucData table
-function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
+function Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
 	-- Don't add this data if it has no buyout
 	if (not buyout) or (buyout <= 0) then return end
 	
@@ -454,13 +454,8 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 		TSM:OneIteration(buyout/quantity, itemID)
 	end
 
-	Scan.AucData[itemID] = Scan.AucData[itemID] or {quantity = 0, onlyPlayer = 0, records = {}, minBuyout=0}
+	Scan.AucData[itemID] = Scan.AucData[itemID] or {quantity = 0, records = {}, minBuyout=0}
 	Scan.AucData[itemID].quantity = Scan.AucData[itemID].quantity + quantity
-
-	-- Keeps track of how many the player has on the AH
-	if owner == select(1, UnitName("player")) then
-		Scan.AucData[itemID].onlyPlayer = Scan.AucData[itemID].onlyPlayer + quantity
-	end
 	
 	-- Calculate the bid / buyout per 1 item
 	buyout = buyout / quantity
@@ -472,19 +467,16 @@ function Scan:AddAuctionRecord(itemID, owner, quantity, bid, buyout)
 	
 	-- No sense in using a record for each entry if they are all the exact same data
 	for _, record in pairs(Scan.AucData[itemID].records) do
-		if (record.owner == owner and record.buyout == buyout and record.bid == bid) then
+		if (record.buyout == buyout and record.bid == bid) then
 			record.buyout = buyout
 			record.bid = bid
-			record.owner = owner
 			record.quantity = record.quantity + quantity
-			record.isPlayer = (owner==select(1,UnitName("player")))
 			return
 		end
 	end
 	
 	-- Create a new entry in the table
-	tinsert(Scan.AucData[itemID].records, {owner = owner, buyout = buyout, bid = bid,
-		isPlayer = (owner==select(1,UnitName("player"))), quantity = quantity})
+	tinsert(Scan.AucData[itemID].records, {buyout = buyout, bid = bid, quantity = quantity})
 end
 
 -- stops the scan because it was either interupted or it was completed successfully
@@ -610,8 +602,8 @@ function Scan:StartGetAllScan()
 			for i=1, 200 do
 				status.page = status.page + 1
 				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
-				local name, _, quantity, _, _, _, bid, _, buyout, _, _, owner = GetAuctionItemInfo("list", status.page)
-				Scan:AddAuctionRecord(link, owner, quantity, bid, buyout)
+				local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", status.page)
+				Scan:AddAuctionRecord(link, quantity, bid, buyout)
 				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
 				
 				if status.page == self.numShown then
@@ -624,7 +616,7 @@ function Scan:StartGetAllScan()
 	
 	local	frame1 = CreateFrame("Frame")
 	frame1:Hide()
-	frame1.delay = 5
+	frame1.delay = 8
 	frame1:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			self.delay = self.delay - elapsed
@@ -634,7 +626,8 @@ function Scan:StartGetAllScan()
 					self:Hide()
 					scanFrame:Show()
 				else
-					self.delay = 0.5
+					self.delay = 1
+					print("DELAY")
 				end
 			end
 		end)
