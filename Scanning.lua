@@ -628,10 +628,14 @@ function Scan:StartGetAllScan()
 	frame1:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			self.delay = self.delay - elapsed
-			if GetNumAuctionItems("list") > 50 then
-				scanFrame.numShown = GetNumAuctionItems("list")
-				self:Hide()
-				scanFrame:Show()
+			if self.delay <= 0 then
+				if GetNumAuctionItems("list") > 50 then
+					scanFrame.numShown = GetNumAuctionItems("list")
+					self:Hide()
+					scanFrame:Show()
+				else
+					self.delay = 0.5
+				end
 			end
 		end)
 	frame1:Show()
