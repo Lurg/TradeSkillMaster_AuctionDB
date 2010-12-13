@@ -627,7 +627,6 @@ function Scan:StartGetAllScan()
 					scanFrame:Show()
 				else
 					self.delay = 1
-					print("DELAY")
 				end
 			end
 		end)
