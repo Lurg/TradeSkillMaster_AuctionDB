@@ -107,8 +107,7 @@ function Scan:ShowScanButton()
 	frame3:SetWidth(180)
 	frame3:SetHeight(30)
 	frame3:SetPoint("TOPRIGHT", AuctionFrameBrowse, "TOPRIGHT", 52, -13)
-	frame3:SetClampedToScreen(true)
-	frame3:SetFrameStrata("HIGH")
+	frame3:Raise()
 	
 	-- make sure the frame attached to the AH frame properly
 	-- if it didn't, wait a bit and try again
@@ -524,7 +523,7 @@ function Scan:UpdateStatus(progress, bar2)
 		Scan.AHFrame:SetBackdropColor(0,0,0, 0.9)
 		Scan.AHFrame:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.90)
 		Scan.AHFrame:SetPoint("TOPRIGHT", AuctionFrame, "TOPRIGHT", -28, -81)
-		Scan.AHFrame:SetFrameStrata("HIGH")
+		Scan.AHFrame:SetFrameStrata("High")
 		
 		-- StatusBar to show the status of the entire scan (the green statusbar)
 		statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
