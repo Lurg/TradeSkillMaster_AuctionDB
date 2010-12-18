@@ -9,20 +9,17 @@
 -- Scan:ShowScanButton() - adds the "TradeSkillMaster_Crafting - Run Scan" button to the AH frame
 -- Scan:AUCTION_HOUSE_CLOSED() - gets called when the AH is closed
 -- Scan:RunScan() - prepares everything to start running a scan
--- Scan:SendQuery() - sends a query to the AH frame once it is ready to be queried (uses Scan.frame as a delay)
+-- Scan:SendQuery() - sends a query to the AH frame once it is ready to be queried (uses frame as a delay)
 -- Scan:AUCTION_ITEM_LIST_UPDATE() - gets called whenever the AH window is updated (something is shown in the results section)
 -- Scan:ScanAuctions() - scans the currently shown page of auctions and collects all the data
 -- Scan:AddAuctionRecord() - Add a new record to the Scan.AucData table
 -- Scan:StopScanning() - stops the scan because it was either interupted or it was completed successfully
 -- Scan:Calc() - runs calculations and stores the resulting material / craft data in the savedvariables DB (options window)
--- Scan:UpdateStatus() - deals with the statusbar that shows scan progress while scanning
 -- Scan:GetTimeDate() - function for getting a formated time and date for storing time of last scan
 
 -- The following "global" (within the addon) variables are initialized in this file:
 -- Scan.staus - stores a ton of information about the status of the current scan
 -- Scan.AucData - stores the resulting data before it is saved to the savedDB file
--- Scan.frame - way of implementing delays using the "OnUpdate" script
--- Scan.frame2 - way of implementing delays using the "OnUpdate" script
 
 -- ===================================================================================== --
 
@@ -30,6 +27,7 @@
 -- load the parent file (TSM) into a local variable and register this file as a module
 local TSM = select(2, ...)
 local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
+local AceGUI = LibStub("AceGUI-3.0")
 
 local BASE_DELAY = 0.10 -- time to delay for before trying to scan a page again when it isn't fully loaded
 local CATEGORIES = {}
@@ -44,192 +42,292 @@ CATEGORIES["Tailoring"] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
 CATEGORIES["Engineering"] = {"5", "6$6", "6$9"}
 CATEGORIES["Cooking"] = {"4$1", "6$5", "6$13"}
 
-local status = {page=0, retries=0, timeDelay=0, AH=false, timeLeft=0, filterlist = {}}
+local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
 
 -- initialize a bunch of variables and frames used throughout the module and register some events
 function Scan:OnEnable()
 	Scan.AucData = {}
-
-	-- Scan delay for soft reset
-	Scan.frame2 = CreateFrame("Frame")
-	Scan.frame2:Hide()
-	Scan.frame2:SetScript("OnUpdate", function(_, elapsed)
-		status.timeLeft = status.timeLeft - elapsed
-		if status.timeLeft < 0 then
-			status.timeLeft = 0
-			Scan.frame2:Hide()
-
-			if status.isScanning ~= "GetAll" then
-				Scan:ScanAuctions()
-			end
-		end
-	end)
-
-	-- Scan delay for hard reset
-	Scan.frame = CreateFrame("Frame")
-	Scan.frame.timeElapsed = 0
-	Scan.frame:Hide()
-	Scan.frame:SetScript("OnUpdate", function(_, elapsed)
-		Scan.frame.timeElapsed = Scan.frame.timeElapsed + elapsed
-		if Scan.frame.timeElapsed >= 0.05 then
-			Scan.frame.timeElapsed = Scan.frame.timeElapsed - 0.05
-			Scan:SendQuery()
-		end
-	end)
-
+	TSMAPI:RegisterSidebarFunction("TradeSkillMaster_AuctionDB", "auctionDBScan", "Interface\\Icons\\Inv_Inscription_WeaponScroll01", 
+		"AuctionDB - Run Scan", function(...) Scan:LoadSidebar(...) end, Scan.HideSidebar)
+		
 	Scan:RegisterEvent("AUCTION_HOUSE_CLOSED")
-	Scan:RegisterEvent("AUCTION_HOUSE_SHOW")
+	Scan:RegisterEvent("AUCTION_HOUSE_SHOW", function() status.AH = true end)
 end
 
--- fires when the AH is openned and adds the "TradeSkillMaster_Crafting - Run Scan" button to the AH frame
-function Scan:AUCTION_HOUSE_SHOW()
-	status.AH = true
-	
-	-- delay to make sure the AH frame is completely loaded before we try and attach the scan button to it
-	local delay = CreateFrame("Frame")
-	delay:Show()
-	delay:SetScript("OnUpdate", function()
-		if AuctionFrameBrowse:GetPoint() then
-			Scan:ShowScanButton()
-			delay:Hide()
+-- Scan delay for hard reset
+local frame = CreateFrame("Frame")
+frame.timeElapsed = 0
+frame:Hide()
+frame:SetScript("OnUpdate", function(self, elapsed)
+	self.timeElapsed = self.timeElapsed + elapsed
+	if self.timeElapsed >= 0.05 then
+		self.timeElapsed = self.timeElapsed - 0.05
+		Scan:SendQuery()
+	end
+end)
+
+-- Scan delay for soft reset
+local frame2 = CreateFrame("Frame")
+frame2:Hide()
+frame2:SetScript("OnUpdate", function(self, elapsed)
+	self.timeLeft = self.timeLeft - elapsed
+	if self.timeLeft < 0 then
+		self.timeLeft = 0
+		self:Hide()
+
+		if status.isScanning ~= "GetAll" then
+			Scan:ScanAuctions()
 		end
-	end)
+	end
+end)
+
+local function CreateLabel(frame, text, fontObject, fontSizeAdjustment, fontStyle, p1, p2, justifyH, justifyV)
+	local label = frame:CreateFontString(nil, "OVERLAY", fontObject)
+	local tFile, tSize = fontObject:GetFont()
+	label:SetFont(tFile, tSize+fontSizeAdjustment, fontStyle)
+	if type(p1) == "table" then
+		label:SetPoint(unpack(p1))
+	elseif type(p1) == "number" then
+		label:SetWidth(p1)
+	end
+	if type(p2) == "table" then
+		label:SetPoint(unpack(p2))
+	elseif type(p2) == "number" then
+		label:SetHeight(p2)
+	end
+	if justifyH then
+		label:SetJustifyH(justifyH)
+	end
+	if justifyV then
+		label:SetJustifyV(justifyV)
+	end
+	label:SetText(text)
+	label:SetTextColor(1, 1, 1, 1)
+	return label
 end
 
--- adds the "TSM_Crafting - Scan" button to the AH frame
-function Scan:ShowScanButton()
-	if Scan.scanButtonFrame and Scan.scanButtonFrame:GetPoint() then
-		Scan.scanButtonFrame:Show()
-		return
-	end
-	-- Scan Button Frame
-	local frame3 = CreateFrame("Frame", nil, AuctionFrameBrowse)
-	frame3:SetWidth(180)
-	frame3:SetHeight(30)
-	frame3:SetPoint("TOPRIGHT", AuctionFrameBrowse, "TOPRIGHT", 52, -13)
-	frame3:Raise()
-	
-	-- make sure the frame attached to the AH frame properly
-	-- if it didn't, wait a bit and try again
-	if not select(2, frame3:GetPoint()) then
-		frame3:Hide()
-		Scan:AUCTION_HOUSE_SHOW()
-		return
-	end
-	
-	-- Button to Start Scanning
-	local button = CreateFrame("Button", nil, frame3, "UIPanelButtonTemplate")
-	local DropDownMenu = CreateFrame("Frame", "TSM_DropDownMenu", dropDownButton, "UIDropDownMenuTemplate")
-	local dropDownButton = CreateFrame("Button", "TSM_DropDownButton", frame3)
-	DropDownMenu.info = {}
-	button:SetPoint("TOPRIGHT", frame3, "TOPRIGHT", 0, 0)
-	button:SetText("TSM_AuctionDB Scan")
-	button:SetWidth(155)
-	button:SetHeight(20)
-	button:SetScript("OnClick", Scan.RunScan)
-	
-	dropDownButton:SetPoint("TOPLEFT", frame3, "TOPLEFT", 0, 4)
-	dropDownButton:SetWidth(30)
-	dropDownButton:SetHeight(30)
-	dropDownButton:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
-	dropDownButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Round")
-	dropDownButton:SetDisabledTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Disabled")
-	dropDownButton:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
-	UIDropDownMenu_Initialize(DropDownMenu, Scan.MenuList, "MENU", 1)
-	dropDownButton:SetScript("OnClick", function(self, button, down)
-		ToggleDropDownMenu(1, nil, DropDownMenu, self:GetName(), 0, 0)
-	end)
-	DropDownMenu:SetPoint("TOPLEFT",dropDownButton,"BOTTOMLEFT");
-	Scan.scanButtonFrame = frame3
+local function AddHorizontalBar(parent, ofsy)
+	local barFrame = CreateFrame("Frame", nil, parent)
+	barFrame:SetPoint("TOPLEFT", 4, ofsy)
+	barFrame:SetPoint("TOPRIGHT", -4, ofsy)
+	barFrame:SetHeight(8)
+	local horizontalBarTex = barFrame:CreateTexture()
+	horizontalBarTex:SetAllPoints(barFrame)
+	horizontalBarTex:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+	horizontalBarTex:SetTexCoord(0.577, 0.683, 0.145, 0.309)
+	horizontalBarTex:SetVertexColor(0, 0, 0.7, 1)
 end
 
--- Setter function for dropdownmenu options
-function Scan:UpdateScanSelection(skillName)
-	if TSM.db.profile.scanSelections[skillName] == nil then
-		TSM.db.profile.scanSelections[skillName] = false
+local function ApplyTexturesToButton(btn, isOpenCloseButton)
+	local texture = "Interface\\TokenFrame\\UI-TokenFrame-CategoryButton"
+	local offset = 6
+	if isopenCloseButton then
+		offset = 5
+		texture = "Interface\\Buttons\\UI-AttributeButton-Encourage-Hilight"
+	end
+	
+	local normalTex = btn:CreateTexture()
+	normalTex:SetTexture(texture)
+	normalTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
+	normalTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
+	
+	local disabledTex = btn:CreateTexture()
+	disabledTex:SetTexture(texture)
+	disabledTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
+	disabledTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
+	disabledTex:SetVertexColor(0.1, 0.1, 0.1, 1)
+	
+	local highlightTex = btn:CreateTexture()
+	highlightTex:SetTexture(texture)
+	highlightTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
+	highlightTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
+	
+	local pressedTex = btn:CreateTexture()
+	pressedTex:SetTexture(texture)
+	pressedTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
+	pressedTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
+	pressedTex:SetVertexColor(1, 1, 1, 0.5)
+	
+	if isopenCloseButton then
+		normalTex:SetTexCoord(0.041, 0.975, 0.129, 1.00)
+		disabledTex:SetTexCoord(0.049, 0.931, 0.008, 0.121)
+		highlightTex:SetTexCoord(0, 1, 0, 1)
+		highlightTex:SetVertexColor(0.9, 0.9, 0.9, 0.9)
+		pressedTex:SetTexCoord(0.035, 0.981, 0.014, 0.670)
+		btn:SetPushedTextOffset(0, -1)
 	else
-		TSM.db.profile.scanSelections[skillName] = not TSM.db.profile.scanSelections[skillName]
+		normalTex:SetTexCoord(0.049, 0.958, 0.066, 0.244)
+		disabledTex:SetTexCoord(0.049, 0.958, 0.066, 0.244)
+		highlightTex:SetTexCoord(0.005, 0.994, 0.613, 0.785)
+		highlightTex:SetVertexColor(0.5, 0.5, 0.5, 0.7)
+		pressedTex:SetTexCoord(0.0256, 0.743, 0.017, 0.158)
+		btn:SetPushedTextOffset(0, -2)
+	end
+	
+	btn:SetNormalTexture(normalTex)
+	btn:SetDisabledTexture(disabledTex)
+	btn:SetHighlightTexture(highlightTex)
+	btn:SetPushedTexture(pressedTex)
+end
+
+-- Tooltips!
+local function ShowTooltip(self)
+	if self.link then
+		GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
+		GameTooltip:SetHyperlink(self.link)
+		GameTooltip:Show()
+	elseif self.tooltip then
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+		GameTooltip:SetText(self.tooltip, 1, 1, 1, 1, true)
+		GameTooltip:Show()
+	else
+		GameTooltip:SetOwner(self.frame, "ANCHOR_BOTTOMRIGHT")
+		GameTooltip:SetText(self.frame.tooltip, 1, 1, 1, 1, true)
+		GameTooltip:Show()
 	end
 end
 
--- Generates the dropdownmenu content
-function Scan.MenuList(self, level)
-	if not level then level = 1 end
-	local info = self.info
-	wipe(info)
-	if level == 1 then
-		info.disabled = nil
-		info.text = "Scan Options"
-		info.notCheckable = 1
-		info.keepShownOnClick = 1
-		info.hasArrow = 1
-		info.value = "OPTIONS"
-		UIDropDownMenu_AddButton(info, level)
+local function HideTooltip()
+	GameTooltip:Hide()
+end
 
-		wipe(info)
-		info.disabled = 1
-		UIDropDownMenu_AddButton(info, level)
-		info.disabled = nil
+local function CreateButton(text, parentFrame, frameName, inheritsFrame, width, height, point, arg1, arg2)
+	local btn = CreateFrame("Button", frameName, parentFrame, inheritsFrame)
+	btn:SetHeight(height or 0)
+	btn:SetWidth(width or 0)
+	btn:SetPoint(unpack(point))
+	btn:SetText(text)
+	btn:Raise()
+	btn:GetFontString():SetPoint("CENTER")
+	local tFile, tSize = GameFontHighlight:GetFont()
+	btn:GetFontString():SetFont(tFile, tSize, "OUTLINE")
+	btn:GetFontString():SetTextColor(1, 1, 1, 1)
+	if type(arg1) == "string" then
+		btn.tooltip = arg1
+		btn:SetScript("OnEnter", ShowTooltip)
+		btn:SetScript("OnLeave", HideTooltip)
+	elseif type(arg2) == "string" then
+		btn:SetPoint(unpack(arg1))
+		btn.tooltip = arg2
+		btn:SetScript("OnEnter", ShowTooltip)
+		btn:SetScript("OnLeave", HideTooltip)
+	end
+	btn:SetBackdrop({
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+			edgeSize = 18,
+			insets = {left = 0, right = 0, top = 0, bottom = 0},
+		})
+	btn:SetScript("OnDisable", function(self) self:GetFontString():SetTextColor(0.5, 0.5, 0.5, 1) end)
+	btn:SetScript("OnEnable", function(self) self:GetFontString():SetTextColor(1, 1, 1, 1) end)
+	ApplyTexturesToButton(btn)
+	return btn
+end
 
-		info.text = "Professions"
-		info.notCheckable = 1
-		info.keepShownOnClick = 1
-		info.hasArrow = 1
-		info.value = "PROFESSIONS"
-		UIDropDownMenu_AddButton(info, level)
-		
-	elseif level == 2 then
-		wipe(info)
-		if UIDROPDOWNMENU_MENU_VALUE == "PROFESSIONS" then
-			info.keepShownOnClick = 1
-			for name in pairs(CATEGORIES) do
-				info.text = name
-				info.func = Scan.UpdateScanSelection
-				info.arg1 = name
-				if TSM.db.profile.scanSelections[name] == nil then
-					TSM.db.profile.scanSelections[name] = false
-				end
-				info.checked = TSM.db.profile.scanSelections[name]
-				UIDropDownMenu_AddButton(info, level)
+local function CreateCheckBox(parent, label, width, point, tooltip)
+	local cb = AceGUI:Create("TSMCheckBox")
+	cb:SetType("checkbox")
+	cb:SetWidth(width)
+	cb:SetLabel(label)
+	cb.frame:SetParent(parent)
+	cb.frame:SetPoint(unpack(point))
+	cb.frame:Show()
+	cb.frame.tooltip = tooltip
+	cb:SetCallback("OnEnter", ShowTooltip)
+	cb:SetCallback("OnLeave", HideTooltip)
+	return cb
+end
+
+function Scan:LoadSidebar(frame)
+	local function GetAllReady()
+		if not select(2, CanSendAuctionQuery()) then
+			local previous = TSM.db.profile.lastGetAll or 1/0
+			if previous > (time() - 15*60) then
+				local diff = previous + 15*60 - time()
+				local diffMin = math.floor(diff/60)
+				local diffSec = diff - diffMin*60
+				return "|cffff0000Ready in " .. diffMin .. "min " .. diffSec .. "sec", false
+			else
+				return "|cffff0000Not Ready", false
 			end
-		elseif UIDROPDOWNMENU_MENU_VALUE == "OPTIONS" then
-			if TSM.db.profile.getAll == nil then
-				TSM.db.profile.getAll = false
-			end
-			
-			local function GetAllReady()
-				if not select(2, CanSendAuctionQuery()) then
-					local previous = TSM.db.profile.lastGetAll or 1/0
-					if previous > (time() - 15*60) then
-						local diff = previous + 15*60 - time()
-						local diffMin = math.floor(diff/60)
-						local diffSec = diff - diffMin*60
-						return "Ready in " .. diffMin .. "min " .. diffSec .. "sec"
-					else
-						return "Not Ready"
-					end
-				else
-					return "Ready"
-				end
-			end
-		
-			info.keepShownOnClick = 1
-			info.text = "Run GetAll Scan"
-			info.func = function() TSM.db.profile.getAll = not TSM.db.profile.getAll end
-			info.checked = TSM.db.profile.getAll
-			UIDropDownMenu_AddButton(info, level)
-			
-			info.keepShownOnClick = 1
-			info.notCheckable = 1
-			info.isTitle = 1
-			info.text = "GetAll Scan: " .. GetAllReady()
-			UIDropDownMenu_AddButton(info, level)
+		else
+			return "|cff00ff00Ready", true
 		end
 	end
+
+	if not Scan.frame then
+		local container = CreateFrame("Frame", nil, frame)
+		container:SetAllPoints(frame)
+		container:Raise()
+		
+		-- title text and first horizontal bar
+		container.title = CreateLabel(container, "AuctionDB - Auction House Scanning", GameFontHighlight, 0, "OUTLINE", 300, {"TOP", 0, -20})
+		AddHorizontalBar(container, -50)
+		
+		-- "Run <Regular/GetAll>s Scan" button + another horizontal bar
+		local button = CreateButton("Run Scan", container, "TSMAuctionDBRunScanButton", "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
+			"Starts scanning the auction house based on the below settings.\n\nIf you are running a GetAll scan, your game client may temporarily lock up.")
+		button:SetScript("OnClick", Scan.RunScan)
+		container.startScanButton = button
+		AddHorizontalBar(container, -110)
+		
+		-- GetAll scan checkbox + label
+		local cb = CreateCheckBox(container, "Run GetAll Scan if Possible", 200, {"TOPLEFT", 12, -130}, "If checked, a GetAll scan will be used whenever possible.\n\nWARNING: With any GetAll scan there is a risk you may get disconnected from the game.")
+		cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.getAll = value end)
+		container.getAllCheckBox = cb
+		container.getAllLabel = CreateLabel(container, "", GameFontHighlight, 0, nil, 300, {"TOPLEFT", 12, -160}, "LEFT")
+		
+		-- timer frame for updating the getall label as well as the "Run <Regular/GetAll> Scan" button + another horizontal bar
+		local timer = CreateFrame("Frame", nil, container)
+		timer.timeLeft = 0
+		timer:SetScript("OnUpdate", function(self, elapsed)
+				self.timeLeft = self.timeLeft - elapsed
+				if self.timeLeft <= 0 then
+					self.timeLeft = 1
+					if status.isScanning then return end
+					local readyText, isReady = GetAllReady()
+					Scan.frame.getAllLabel:SetText("|cffffbb00GetAll Scan: "..readyText)
+					if isReady and TSM.db.profile.getAll then
+						Scan.frame.startScanButton:SetText("Run GetAll Scan")
+					else
+						Scan.frame.startScanButton:SetText("Run Regular Scan")
+					end
+				end
+			end)
+		AddHorizontalBar(container, -180)
+		
+		container.professionLabel = CreateLabel(container, "Professions to scan for:", GameFontHighlight, 0, nil, 300, {"TOP", 0, -190})
+		-- profession checkboxes
+		local i = 0
+		local columnStart = frame:GetWidth() / 2
+		for name in pairs(CATEGORIES) do
+			i = i + 1
+			if TSM.db.profile.scanSelections[name] == nil then
+				TSM.db.profile.scanSelections[name] = false
+			end
+			local ofsx = 10+columnStart*((i+1)%2)-- alternating columns
+			local ofsy = -190-ceil(i/2)*25 -- two per row
+			local cb = CreateCheckBox(container, name, 200, {"TOPLEFT", ofsx, ofsy}, "If checked, a regular scan will scan for this profession.")
+			cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.scanSelections[name] = value end)
+			container[strlower(name).."CheckBox"] = cb
+		end
+		
+		Scan.frame = container
+	end
+	
+	Scan.frame.getAllCheckBox:SetValue(TSM.db.profile.getAll)
+	for name in pairs(CATEGORIES) do
+		Scan.frame[strlower(name).."CheckBox"]:SetValue(TSM.db.profile.scanSelections[name])
+	end
+	
+	Scan.frame:Show()
 end
+
+function Scan:HideSidebar()
+	Scan.frame:Hide()
+end
+
 -- gets called when the AH is closed
 function Scan:AUCTION_HOUSE_CLOSED()
-	if Scan.AHFrame then Scan.AHFrame:Hide() end -- hide the statusbar
 	Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
 	status.AH = false
 	if status.isScanning then -- stop scanning if we were scanning (pass true to specify it was interupted)
@@ -254,8 +352,11 @@ function Scan:RunScan()
 		status.page = 0
 		status.retries = 3
 		status.hardRetry = nil
-		Scan:UpdateStatus(0)
-		Scan:UpdateStatus(0, true)
+		TSMAPI:LockSidebar()
+		TSMAPI:ShowSidebarStatusBar()
+		TSMAPI:SetSidebarStatusBarText("AuctionDB_Scanning")
+		TSMAPI:UpdateSidebarStatusBar(0)
+		TSMAPI:UpdateSidebarStatusBar(0, true)
 		Scan:StartGetAllScan()
 		return
 	end
@@ -315,26 +416,29 @@ function Scan:RunScan()
 	status.invSlot = scanQueue[1].invSlot
 	status.isScanning = "Category"
 	status.numItems = #(scanQueue)
-	Scan:UpdateStatus(0)
-	Scan:UpdateStatus(0, true)
+	TSMAPI:LockSidebar()
+	TSMAPI:ShowSidebarStatusBar()
+	TSMAPI:SetSidebarStatusBarText("AuctionDB_Scanning")
+	TSMAPI:UpdateSidebarStatusBar(0)
+	TSMAPI:UpdateSidebarStatusBar(0, true)
 	
 	--starts scanning
 	Scan:SendQuery()
 end
 
--- sends a query to the AH frame once it is ready to be queried (uses Scan.frame as a delay)
+-- sends a query to the AH frame once it is ready to be queried (uses frame as a delay)
 function Scan:SendQuery(forceQueue)
 	status.queued = not CanSendAuctionQuery()
 	if (not status.queued and not forceQueue) then
 		-- stop delay timer
-		Scan.frame:Hide()
+		frame:Hide()
 		
 		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
 		QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
-		Scan.frame:Show()
+		frame:Show()
 	end
 end
 
@@ -343,13 +447,12 @@ function Scan:AUCTION_ITEM_LIST_UPDATE()
 	if status.isScanning then
 		status.timeDelay = 0
 
-		Scan.frame2:Hide()
+		frame2:Hide()
 		
 		-- now that our query was successful we can get our data
 		Scan:ScanAuctions()
 	else
 		Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-		Scan.AHFrame:Hide()
 	end
 end
 
@@ -385,8 +488,8 @@ function Scan:ScanAuctions()
 				-- Soft retry
 				-- runs a delay and then tries to scan the query again
 				status.timeDelay = status.timeDelay + BASE_DELAY
-				status.timeLeft = BASE_DELAY
-				Scan.frame2:Show()
+				frame2.timeLeft = BASE_DELAY
+				frame2:Show()
 	
 				-- If after 4 seconds of retrying we still don't have data, will go and requery to try and solve the issue
 				-- if we still don't have data, we try to scan it anyway and move on.
@@ -402,8 +505,8 @@ function Scan:ScanAuctions()
 	
 	status.hardRetry = nil
 	status.retries = 0
-	Scan:UpdateStatus(floor(status.page/totalPages*100 + 0.5), true)
-	Scan:UpdateStatus(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5))
+	TSMAPI:UpdateSidebarStatusBar(floor(status.page/totalPages*100 + 0.5), true)
+	TSMAPI:UpdateSidebarStatusBar(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5))
 	
 	-- now that we know our query is good, time to verify and then store our data
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
@@ -434,7 +537,7 @@ function Scan:ScanAuctions()
 		status.class = status.filterList[1].class
 		status.subClass = status.filterList[1].subClass
 		status.invSlot = status.filterList[1].invSlot
-		Scan:UpdateStatus(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
+		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
 		status.page = 0
 		Scan:SendQuery()
 		return
@@ -480,6 +583,8 @@ end
 
 -- stops the scan because it was either interupted or it was completed successfully
 function Scan:StopScanning(interupted)
+	TSMAPI:UnlockSidebar()
+	TSMAPI:HideSidebarStatusBar()
 	if interupted then
 		-- fires if the scan was interupted (auction house was closed while scanning)
 		TSM:Print("Scan interupted due to auction house being closed.")
@@ -487,10 +592,6 @@ function Scan:StopScanning(interupted)
 		-- fires if the scan completed sucessfully
 		-- validates the scan data
 		TSM:Print("Scan complete!")
-		if Scan.AHFrame then 
-			Scan.AHFrame:Hide()
-		end
-		
 		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
 			TSM.data[itemID].lastSeen = time()
@@ -501,92 +602,8 @@ function Scan:StopScanning(interupted)
 	status.isScanning = nil
 	status.queued = nil
 	
-	Scan.frame:Hide()
-	Scan.frame2:Hide()
-end
-
--- deals with the statusbar that shows scan progress while scanning
-function Scan:UpdateStatus(progress, bar2)
-	if not Scan.AHFrame then
-		-- Frame that containes the StatusBar
-		Scan.AHFrame = CreateFrame("Frame", nil, AuctionFrame)
-		Scan.AHFrame:SetHeight(25)
-		Scan.AHFrame:SetWidth(619)
-		Scan.AHFrame:SetBackdrop({
-				bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-				tile = true,
-				tileSize = 16,
-				edgeSize = 16,
-				insets = { left = 3, right = 3, top = 5, bottom = 3 }
-			})
-		Scan.AHFrame:SetBackdropColor(0,0,0, 0.9)
-		Scan.AHFrame:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.90)
-		Scan.AHFrame:SetPoint("TOPRIGHT", AuctionFrame, "TOPRIGHT", -28, -81)
-		Scan.AHFrame:SetFrameStrata("High")
-		
-		-- StatusBar to show the status of the entire scan (the green statusbar)
-		statusBar = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
-		statusBar:SetOrientation("HORIZONTAL")
-		statusBar:SetHeight(17)
-		statusBar:SetWidth(610)
-		statusBar:SetMinMaxValues(0, 100)
-		statusBar:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
-		statusBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
-		statusBar:SetStatusBarColor(0,100,20, 0.9)
-		
-		-- StatusBar to show the status of scanning the current item (the gray statusbar)
-		statusBar2 = CreateFrame("STATUSBAR", nil, Scan.AHFrame,"TextStatusBar")
-		statusBar2:SetOrientation("HORIZONTAL")
-		statusBar2:SetHeight(17)
-		statusBar2:SetWidth(610)
-		statusBar2:SetMinMaxValues(0, 100)
-		statusBar2:SetPoint("TOPLEFT", Scan.AHFrame, "TOPLEFT", 5, -4)
-		statusBar2:SetStatusBarTexture("Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
-		statusBar2:SetStatusBarColor(200,10,20, 0.5)
-		statusBar2:SetValue(25)
-		
-		-- Text for the StatusBar
-		local tFile, tSize = GameFontNormal:GetFont()
-		statusBar.text = statusBar:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-		statusBar.text:SetFont(tFile, tSize, "OUTLINE")
-		statusBar.text:SetPoint("CENTER")
-	end
-	Scan.AHFrame:Show()
-	
-	-- update the text of the statusBar
-	statusBar.text:SetText("TradeSkillMaster_AuctionDB - Scanning")
-	
-	-- update the value of the main status bar (% filled)
-	if progress then
-		if bar2 then
-			statusBar2:SetValue(progress)
-		else
-			statusBar:SetValue(progress)
-		end
-	end
-end
-
--- function for getting a formated time and date for storing time of last scan
-function Scan:GetTimeDate()
-	local t = date("*t")
-	local AMPM = ""
-	
-	if t.hour == 0 then
-		t.hour = 12
-		AMPM = "AM"
-	elseif t.hour > 12 then
-		t.hour = t.hour - 12
-		AMPM = " " .. "PM"
-	else
-		AMPM = " " .. "AM"
-	end
-	
-	if t.min < 10 then
-		t.min = "0" .. t.min
-	end
-	
-	return (t.hour .. ":" .. t.min .. AMPM .. ", " .. date("%a %b %d"))
+	frame:Hide()
+	frame2:Hide()
 end
 	
 function Scan:StartGetAllScan()
@@ -603,7 +620,8 @@ function Scan:StartGetAllScan()
 				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
 				local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", status.page)
 				Scan:AddAuctionRecord(link, quantity, bid, buyout)
-				Scan:UpdateStatus(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
+				TSMAPI:UpdateSidebarStatusBar(100-floor(i/2), true)
+				TSMAPI:UpdateSidebarStatusBar(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
 				
 				if status.page == self.numShown then
 					self:Hide()
@@ -619,6 +637,7 @@ function Scan:StartGetAllScan()
 	frame1:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			self.delay = self.delay - elapsed
+			TSMAPI:UpdateSidebarStatusBar(100-floor((self.delay/8)*100), true)
 			if self.delay <= 0 then
 				if GetNumAuctionItems("list") > 50 then
 					scanFrame.numShown = GetNumAuctionItems("list")

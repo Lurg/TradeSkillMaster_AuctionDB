@@ -15,6 +15,7 @@ local savedDBDefaults = {
 	},
 	profile = {
 		scanSelections = {},
+		getAll = false,
 	},
 }
 
