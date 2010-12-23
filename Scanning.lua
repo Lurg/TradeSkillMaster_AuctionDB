@@ -473,7 +473,7 @@ function Scan:ScanAuctions()
 			-- checks whether or not the name of the auctions are valid
 			-- if not, the data is bad
 			name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i] = GetAuctionItemInfo("list", i)
-			if not name[i] then
+			if not (name[i] and quantity[i] and bid[i] and buyout[i]) then
 				badData = true
 			end
 		end
