@@ -306,7 +306,7 @@ function Scan:LoadSidebar(frame)
 			end
 			local ofsx = 10+columnStart*((i+1)%2)-- alternating columns
 			local ofsy = -190-ceil(i/2)*25 -- two per row
-			local cb = CreateCheckBox(container, name, 200, {"TOPLEFT", ofsx, ofsy}, "If checked, a regular scan will scan for this profession.")
+			local cb = CreateCheckBox(container, name, 150, {"TOPLEFT", ofsx, ofsy}, "If checked, a regular scan will scan for this profession.")
 			cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.scanSelections[name] = value end)
 			container[strlower(name).."CheckBox"] = cb
 		end
