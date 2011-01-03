@@ -1,5 +1,5 @@
 ## Interface: 40000
-## Title: TradeSkillMaster_AuctionDB
+## Title: |cff00ff00TradeSkillMaster_AuctionDB|r
 ## Notes: Stores auction house data and calculates market prices.
 ## Author: Sapu94, Mischanix
 ## Version: r@file-revision@
