@@ -511,8 +511,8 @@ function Scan:ScanAuctions()
 	-- now that we know our query is good, time to verify and then store our data
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
-		local link = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		Scan:AddAuctionRecord(link, quantity[i], bid[i], buyout[i])
+		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
+		Scan:AddAuctionRecord(itemID, quantity[i], bid[i], buyout[i])
 	end
 
 	-- This query has more pages to scan
@@ -550,7 +550,7 @@ end
 -- Add a new record to the Scan.AucData table
 function Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
 	-- Don't add this data if it has no buyout
-	if (not buyout) or (buyout <= 0) then return end
+	if (not buyout) or (buyout <= 0) then return true end
 	
 	for i=1, quantity do
 		TSM:OneIteration(buyout/quantity, itemID)
@@ -607,25 +607,29 @@ function Scan:StopScanning(interupted)
 end
 	
 function Scan:StartGetAllScan()
-	status.page = 0
 	TSM.db.profile.lastGetAll = time()
 	QueryAuctionItems("", "", "", nil, nil, nil, nil, nil, nil, true)
 	
 	local scanFrame = CreateFrame("Frame")
 	scanFrame:Hide()
+	scanFrame.num = 0
 	scanFrame:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			for i=1, 200 do
-				status.page = status.page + 1
-				local link = TSMAPI:GetItemID(GetAuctionItemLink("list", status.page))
-				local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", status.page)
-				Scan:AddAuctionRecord(link, quantity, bid, buyout)
+				self.num = self.num + 1
+				local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", self.num))
+				local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", self.num)
+				Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
 				TSMAPI:UpdateSidebarStatusBar(100-floor(i/2), true)
-				TSMAPI:UpdateSidebarStatusBar(floor((1+(status.page-self.numShown)/self.numShown)*100 + 0.5))
+				TSMAPI:UpdateSidebarStatusBar(floor((1+(self.num-self.numShown)/self.numShown)*100 + 0.5))
 				
-				if status.page == self.numShown then
+				if self.num == self.numShown then
+					if self.num == 42554 then TSM:Print("|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result possibly hundreds of items may have been missed. Please use regular scans until blizzard fixes this bug.") end
 					self:Hide()
 					Scan:StopScanning()
+					break
+				elseif not AuctionFrame:IsVisible() then
+					self:Hide()
 					break
 				end
 			end
@@ -633,11 +637,13 @@ function Scan:StartGetAllScan()
 	
 	local	frame1 = CreateFrame("Frame")
 	frame1:Hide()
-	frame1.delay = 8
+	frame1.totalDelay = 20
+	frame1.delay = 1
 	frame1:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			self.delay = self.delay - elapsed
-			TSMAPI:UpdateSidebarStatusBar(100-floor((self.delay/8)*100), true)
+			self.totalDelay = self.totalDelay - elapsed
+			TSMAPI:UpdateSidebarStatusBar(100-floor((self.totalDelay/20)*100), true)
 			if self.delay <= 0 then
 				if GetNumAuctionItems("list") > 50 then
 					scanFrame.numShown = GetNumAuctionItems("list")

@@ -60,7 +60,7 @@ function TSM:GetData(itemID)
 	if not itemID then return end
 	itemID = TSMAPI:GetNewGem(itemID) or itemID
 	if not TSM.data[itemID] then return end
-	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+	local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev, TSM.data[itemID].minBuyout
 end
 
@@ -68,8 +68,8 @@ function TSM:Lookup(itemID)
 	local name, link = GetItemInfo(itemID)
 	itemID = TSMAPI:GetItemID(link)
 	if not TSM.data[itemID] then return TSM:Print("No data for that item") end
-	local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
-	local value = math.floor(TSM.data[itemID].correctedMean/100+0.5)/100
+	local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+	local value = floor(TSM.data[itemID].correctedMean/100+0.5)/100
 	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " .. (TSM.data[itemID].quantity or "???") ..
 		" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 end
@@ -79,49 +79,41 @@ function TSM:SetQuantity(itemID, quantity)
 end
 
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
-	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, --[[dTimeResidual=0, dTimeResidualI=0,]] lastSeen=time(), filtered=false}
+	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, lastSeen=time(), filtered=false}
 	local item = TSM.data[itemID]
 	item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
 	local dTime = time() - item.lastSeen
-	--[[if item.dTimeResidualI > 0 and dTime < item.dTimeResidual then
-		dTime = item.dTimeResidual * math.exp(-item.dTimeResidualI)
-		item.dTimeResidualI = item.dTimeResidualI + 1
-	end]]
 	local delta = x - item.uncorrectedMean
 	item.uncorrectedMean = item.uncorrectedMean + delta/item.n
 	item.M2 = item.M2 + delta*(x - item.uncorrectedMean)
 	local stdDev = nil
 	if item.n ~= 1 then
-		stdDev = math.sqrt(item.M2/(item.n - 1))
+		stdDev = sqrt(item.M2/(item.n - 1))
 	end
-	--[[if (dTime >= 3600*24 and item.dTimeResidualI == 0) or (dTime > item.dTimeResidual and item.dTimeResidualI > 0) then
-		item.dTimeResidual = dTime
-		item.dTimeResidualI = 1
-	end]]
 	local c = 1.5
-	if stdDev ~= nil and stdDev ~= 0 then -- some more filtering just to make sure anyone trying to reset a market
+	if stdDev and stdDev ~= 0 then -- some more filtering just to make sure anyone trying to reset a market
 		if stdDev > 2*item.correctedMean then c = 1 end -- doesn't get through to us!
 		if stdDev > 4*item.correctedMean then c = 0.7 end
 	end
-	if stdDev==nil or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
+	if not stdDev or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
 		item.correctedMean = item.uncorrectedMean
 		if item.n == 2 then item.filtered = true end
 	elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev*c + item.correctedMean) > x and (item.correctedMean - stdDev*c) < x and item.n > 2) or item.filtered then
 		local w = TSM:GetWeight(dTime, item.n)
 		item.correctedMean = w*item.correctedMean + (1-w)*x
-		if stdDev > 1.5*math.abs(item.correctedMean - x) then item.filtered = false end
+		if stdDev > 1.5*abs(item.correctedMean - x) then item.filtered = false end
 	end
 end
 
 function TSM:GetWeight(dTime, i)
-	-- k here is valued for w value of 0.5 after 2 weeks
-	-- k = -1209600 / log_0.5(i/2)
+	-- k here is valued for w value of 0.5 after 5 days
+	-- k = -432000 / log_0.5(i/2)
 	-- a "good" idea would be to precalculate k for values of i either at addon load or with a script
 	--   to cut down on processing time.  Also note that as i -> 2, k -> negative infinity
 	--   so we'd like to avoid i <= 2
 	if dTime < 3600 then return (i-1)/i end
 	local s = 5*24*60*60 -- 5 days
-	local k = -s/(math.log(i/2)/math.log(0.5))
+	local k = -s/(log(i/2)/log(0.5))
 	return (i-i^(dTime/(dTime + k)))/i
 end
 
@@ -153,13 +145,13 @@ function TSM:LoadGUI(parent)
 		c = floor(mod(c, 100))
 		local moneyString = ""
 		if g > 0 then
-			moneyString = string.format("%d%s", g, GOLD_TEXT)
+			moneyString = format("%d%s", g, GOLD_TEXT)
 		end
 		if s > 0 and (g < 100) then
-			moneyString = string.format("%s%d%s", moneyString, s, SILVER_TEXT)
+			moneyString = format("%s%d%s", moneyString, s, SILVER_TEXT)
 		end
 		if c > 0 and (g < 100) then
-			moneyString = string.format("%s%d%s", moneyString, c, COPPER_TEXT)
+			moneyString = format("%s%d%s", moneyString, c, COPPER_TEXT)
 		end
 		if moneyString == "" then moneyString = "0"..COPPER_TEXT end
 		return moneyString
@@ -197,9 +189,9 @@ function TSM:LoadGUI(parent)
 				itemID = TSMAPI:GetItemID(link)
 			end
 			if not TSM.data[itemID] then return TSM:Print("No data for that item") end
-			local stdDev = math.sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
+			local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 			local value = CopperToGold(TSM.data[itemID].correctedMean)
-			text:SetText(name .. " has a market value of " .. value .. " and was seen " .. (TSM.data[itemID].quantity or "???") ..
+			text:SetText((name or value) .. " has a market value of " .. value .. " and was seen " .. (TSM.data[itemID].quantity or "???") ..
 				" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 		end)
 	container:AddChild(editBox, text)
