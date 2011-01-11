@@ -388,7 +388,7 @@ function Scan:RunScan()
 				end
 				
 				if valid then
-					tinsert(scanQueue, {class=class, subClass=(subClass or 0), invSlot=(invSlot or 0)})
+					tinsert(scanQueue, {id=#scanQueue, class=class, subClass=(subClass or 0), invSlot=(invSlot or 0)})
 				end
 			end
 		end
@@ -414,6 +414,7 @@ function Scan:RunScan()
 	status.class = scanQueue[1].class
 	status.subClass = scanQueue[1].subClass
 	status.invSlot = scanQueue[1].invSlot
+	status.id = scanQueue[1].id
 	status.isScanning = "Category"
 	status.numItems = #(scanQueue)
 	TSMAPI:LockSidebar()
@@ -433,8 +434,8 @@ function Scan:SendQuery(forceQueue)
 		-- stop delay timer
 		frame:Hide()
 		
-		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
+		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
@@ -450,6 +451,7 @@ function Scan:AUCTION_ITEM_LIST_UPDATE()
 		frame2:Hide()
 		
 		-- now that our query was successful we can get our data
+		Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		Scan:ScanAuctions()
 	else
 		Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
@@ -517,7 +519,7 @@ function Scan:ScanAuctions()
 
 	-- This query has more pages to scan
 	-- increment the page # and send the new query
-	if shown == 50 then
+	if totalPages > (status.page + 1) then
 		status.page = status.page + 1
 		Scan:SendQuery()
 		return
@@ -525,9 +527,7 @@ function Scan:ScanAuctions()
 	
 	-- Removes the current filter from the filterList as we are done scanning for that item
 	for i=#(status.filterList), 1, -1 do
-		local class, subClass, invSlot = status.filterList[i].class, status.filterList[i].subClass, status.filterList[i].invSlot
-		if class == status.class and subClass == status.subClass and invSlot == status.invSlot then
-			tremove(status.filterList, i)
+		if status.filterList[i].id == status.id then
 			break
 		end
 	end
@@ -537,6 +537,7 @@ function Scan:ScanAuctions()
 		status.class = status.filterList[1].class
 		status.subClass = status.filterList[1].subClass
 		status.invSlot = status.filterList[1].invSlot
+		status.id = status.filterList[1].id
 		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
 		status.page = 0
 		Scan:SendQuery()
