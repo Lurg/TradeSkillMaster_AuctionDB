@@ -528,6 +528,7 @@ function Scan:ScanAuctions()
 	-- Removes the current filter from the filterList as we are done scanning for that item
 	for i=#(status.filterList), 1, -1 do
 		if status.filterList[i].id == status.id then
+			tremove(status.filterList, i)
 			break
 		end
 	end
