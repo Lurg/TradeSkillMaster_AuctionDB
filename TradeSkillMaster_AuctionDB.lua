@@ -16,6 +16,7 @@ local savedDBDefaults = {
 	profile = {
 		scanSelections = {},
 		getAll = false,
+		tooltip = true,
 	},
 }
 
@@ -40,6 +41,10 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterData("auctionplayers", TSM.GetPlayers)
 	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
 	
+	if TSM.db.profile.tooltip then
+		TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
+	end
+	
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 end
 
@@ -47,6 +52,37 @@ function TSM:OnDisable()
 	local sTime = GetTime()
 	TSM:Serialize(TSM.data)
 	TSM.db.factionrealm.time = GetTime() - sTime
+end
+
+local function FormatMoneyText(c)
+	local GOLD_TEXT = "\124cFFFFD700g\124r"
+	local SILVER_TEXT = "\124cFFC7C7CFs\124r"
+	local COPPER_TEXT = "\124cFFEDA55Fc\124r"
+	local g = floor(c/10000)
+	local s = floor(mod(c/100,100))
+	c = floor(mod(c, 100))
+	local moneyString = ""
+	if g > 0 then
+		moneyString = format("%s%s", "|cffffffff"..g.."|r", GOLD_TEXT)
+	end
+	if s > 0 and (g < 100) then
+		moneyString = format("%s%s%s", moneyString, "|cffffffff"..s.."|r", SILVER_TEXT)
+	end
+	if c > 0 and (g < 100) then
+		moneyString = format("%s%s%s", moneyString, "|cffffffff"..c.."|r", COPPER_TEXT)
+	end
+	if moneyString == "" then moneyString = "0"..COPPER_TEXT end
+	return moneyString
+end
+
+function TSM:LoadTooltip(itemID)
+	local marketValue, seenCount, lastSeen, stdDev, minBuyout = TSMAPI:GetData("market", itemID)
+	
+	if marketValue and minBuyout and seenCount then
+		return {"AuctionDB Market Value: |cffffffff"..FormatMoneyText(marketValue),
+			"AuctionDB Min Buyout: |cffffffff"..FormatMoneyText(minBuyout),
+			"AuctionDB Seen Count: |cffffffff"..seenCount}
+	end
 end
 
 function TSM:Reset()
@@ -166,6 +202,29 @@ function TSM:LoadGUI(parent)
 	spacer:SetText(" ")
 	container:AddChild(spacer)
 	
+	local checkBox = AceGUI:Create("CheckBox")
+	checkBox:SetFullWidth(true)
+	checkBox:SetLabel("Enable display of AuctionDB data in tooltip.")
+	checkBox:SetValue(TSM.db.profile.tooltip)
+	checkBox:SetCallback("OnValueChanged", function(_,_,value)
+			if value then
+				TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
+			else
+				TSMAPI:UnregisterTooltip("TradeSkillMaster_AuctionDB")
+			end
+		end)
+	container:AddChild(checkBox)
+	
+	local spacer = AceGUI:Create("Label")
+	spacer:SetFullWidth(true)
+	spacer:SetText(" ")
+	container:AddChild(spacer)
+	
+	local spacer = AceGUI:Create("Label")
+	spacer:SetFullWidth(true)
+	spacer:SetText(" ")
+	container:AddChild(spacer)
+	
 	local text = AceGUI:Create("Label")
 	text:SetFullWidth(true)
 	text:SetFontObject(GameFontNormalLarge)
@@ -174,7 +233,7 @@ function TSM:LoadGUI(parent)
 	local editBox = AceGUI:Create("EditBox")
 	editBox:SetWidth(200)
 	editBox:SetLabel("Item Lookup:")
-	editBox:SetCallback("OnEnterPressed", function(_, _, value)
+	editBox:SetCallback("OnEnterPressed", function(_,_,value)
 			if not value then return TSM:Print("No data for that item") end
 			local itemID
 			local name, link = GetItemInfo(value)
