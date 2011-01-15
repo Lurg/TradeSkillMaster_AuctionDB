@@ -6,5 +6,15 @@
 ## SavedVariables: TradeSkillMaster_AuctionDBDB
 ## Dependency: TradeSkillMaster
 
+Locale\enUS.lua
+Locale\deDE.lua
+Locale\esES.lua
+Locale\esMX.lua
+Locale\frFR.lua
+Locale\koKR.lua
+Locale\ruRU.lua
+Locale\zhCN.lua
+Locale\zhTW.lua
+
 TradeSkillMaster_AuctionDB.lua
 Scanning.lua

@@ -28,19 +28,20 @@
 local TSM = select(2, ...)
 local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
+local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
 local BASE_DELAY = 0.10 -- time to delay for before trying to scan a page again when it isn't fully loaded
 local CATEGORIES = {}
-CATEGORIES["Enchanting"] = {"4$6", "6$1", "6$4", "6$7", "6$14"}
-CATEGORIES["Inscription"] = {"5", "6$6", "6$9"}
-CATEGORIES["Jewelcrafting"] = {"6$8", "10"}
-CATEGORIES["Alchemy"] = {"4$2", "4$3", "4$4", "6$6"}
-CATEGORIES["Blacksmithing"] = {"1$1", "1$2", "1$5", "1$6", "1$7", "1$8", "1$9", "1$13", "1$14", "2$4", 
+CATEGORIES[L["Enchanting"]] = {"4$6", "6$1", "6$4", "6$7", "6$14"}
+CATEGORIES[L["Inscription"]] = {"5", "6$6", "6$9"}
+CATEGORIES[L["Jewelcrafting"]] = {"6$8", "10"}
+CATEGORIES[L["Alchemy"]] = {"4$2", "4$3", "4$4", "6$6"}
+CATEGORIES[L["Blacksmithing"]] = {"1$1", "1$2", "1$5", "1$6", "1$7", "1$8", "1$9", "1$13", "1$14", "2$4", 
 	"2$5", "2$6", "6$1", "6$4", "6$7", "6$12", "6$13", "6$14"}
-CATEGORIES["Leatherworking"] = {"2$1$13", "2$3", "2$4", "6$1", "6$3", "6$12", "6$13"}
-CATEGORIES["Tailoring"] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
-CATEGORIES["Engineering"] = {"5", "6$6", "6$9"}
-CATEGORIES["Cooking"] = {"4$1", "6$5", "6$13"}
+CATEGORIES[L["Leatherworking"]] = {"2$1$13", "2$3", "2$4", "6$1", "6$3", "6$12", "6$13"}
+CATEGORIES[L["Tailoring"]] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
+CATEGORIES[L["Engineering"]] = {"5", "6$6", "6$9"}
+CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$13"}
 
 local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
 
@@ -48,7 +49,7 @@ local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
 function Scan:OnEnable()
 	Scan.AucData = {}
 	TSMAPI:RegisterSidebarFunction("TradeSkillMaster_AuctionDB", "auctionDBScan", "Interface\\Icons\\Inv_Inscription_WeaponScroll01", 
-		"AuctionDB - Run Scan", function(...) Scan:LoadSidebar(...) end, Scan.HideSidebar)
+		L["AuctionDB - Run Scan"], function(...) Scan:LoadSidebar(...) end, Scan.HideSidebar)
 		
 	Scan:RegisterEvent("AUCTION_HOUSE_CLOSED")
 	Scan:RegisterEvent("AUCTION_HOUSE_SHOW", function() status.AH = true end)
@@ -245,12 +246,12 @@ function Scan:LoadSidebar(frame)
 				local diff = previous + 15*60 - time()
 				local diffMin = math.floor(diff/60)
 				local diffSec = diff - diffMin*60
-				return "|cffff0000Ready in " .. diffMin .. "min " .. diffSec .. "sec", false
+				return "|cffff0000"..format(L["Ready in %s min and %s sec"], diffMin, diffSec), false
 			else
-				return "|cffff0000Not Ready", false
+				return "|cffff0000"..L["Not Ready"], false
 			end
 		else
-			return "|cff00ff00Ready", true
+			return "|cff00ff00"..L["Ready"], true
 		end
 	end
 
@@ -260,18 +261,18 @@ function Scan:LoadSidebar(frame)
 		container:Raise()
 		
 		-- title text and first horizontal bar
-		container.title = CreateLabel(container, "AuctionDB - Auction House Scanning", GameFontHighlight, 0, "OUTLINE", 300, {"TOP", 0, -20})
+		container.title = CreateLabel(container, L["AuctionDB - Auction House Scanning"], GameFontHighlight, 0, "OUTLINE", 300, {"TOP", 0, -20})
 		AddHorizontalBar(container, -50)
 		
 		-- "Run <Regular/GetAll>s Scan" button + another horizontal bar
-		local button = CreateButton("Run Scan", container, "TSMAuctionDBRunScanButton", "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
-			"Starts scanning the auction house based on the below settings.\n\nIf you are running a GetAll scan, your game client may temporarily lock up.")
+		local button = CreateButton(L["Run Scan"], container, "TSMAuctionDBRunScanButton", "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
+			L["Starts scanning the auction house based on the below settings.\n\nIf you are running a GetAll scan, your game client may temporarily lock up."])
 		button:SetScript("OnClick", Scan.RunScan)
 		container.startScanButton = button
 		AddHorizontalBar(container, -110)
 		
 		-- GetAll scan checkbox + label
-		local cb = CreateCheckBox(container, "Run GetAll Scan if Possible", 200, {"TOPLEFT", 12, -130}, "If checked, a GetAll scan will be used whenever possible.\n\nWARNING: With any GetAll scan there is a risk you may get disconnected from the game.")
+		local cb = CreateCheckBox(container, L["Run GetAll Scan if Possible"], 200, {"TOPLEFT", 12, -130}, L["If checked, a GetAll scan will be used whenever possible.\n\nWARNING: With any GetAll scan there is a risk you may get disconnected from the game."])
 		cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.getAll = value end)
 		container.getAllCheckBox = cb
 		container.getAllLabel = CreateLabel(container, "", GameFontHighlight, 0, nil, 300, {"TOPLEFT", 12, -160}, "LEFT")
@@ -285,17 +286,17 @@ function Scan:LoadSidebar(frame)
 					self.timeLeft = 1
 					if status.isScanning then return end
 					local readyText, isReady = GetAllReady()
-					Scan.frame.getAllLabel:SetText("|cffffbb00GetAll Scan: "..readyText)
+					Scan.frame.getAllLabel:SetText("|cffffbb00"..L["GetAll Scan:"].." "..readyText)
 					if isReady and TSM.db.profile.getAll then
-						Scan.frame.startScanButton:SetText("Run GetAll Scan")
+						Scan.frame.startScanButton:SetText(L["Run GetAll Scan"])
 					else
-						Scan.frame.startScanButton:SetText("Run Regular Scan")
+						Scan.frame.startScanButton:SetText(L["Run Regular Scan"])
 					end
 				end
 			end)
 		AddHorizontalBar(container, -180)
 		
-		container.professionLabel = CreateLabel(container, "Professions to scan for:", GameFontHighlight, 0, nil, 300, {"TOP", 0, -190})
+		container.professionLabel = CreateLabel(container, L["Professions to scan for:"], GameFontHighlight, 0, nil, 300, {"TOP", 0, -190})
 		-- profession checkboxes
 		local i = 0
 		local columnStart = frame:GetWidth() / 2
@@ -306,7 +307,7 @@ function Scan:LoadSidebar(frame)
 			end
 			local ofsx = 10+columnStart*((i+1)%2)-- alternating columns
 			local ofsy = -190-ceil(i/2)*25 -- two per row
-			local cb = CreateCheckBox(container, name, 150, {"TOPLEFT", ofsx, ofsy}, "If checked, a regular scan will scan for this profession.")
+			local cb = CreateCheckBox(container, name, 150, {"TOPLEFT", ofsx, ofsy}, L["If checked, a regular scan will scan for this profession."])
 			cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.scanSelections[name] = value end)
 			container[strlower(name).."CheckBox"] = cb
 		end
@@ -342,7 +343,7 @@ function Scan:RunScan()
 	local num = 1
 	
 	if not status.AH then
-		TSM:Print("Auction house must be open in order to scan.")
+		TSM:Print(L["Auction house must be open in order to scan."])
 		return
 	end
 	
@@ -354,7 +355,7 @@ function Scan:RunScan()
 		status.hardRetry = nil
 		TSMAPI:LockSidebar()
 		TSMAPI:ShowSidebarStatusBar()
-		TSMAPI:SetSidebarStatusBarText("AuctionDB_Scanning")
+		TSMAPI:SetSidebarStatusBarText(L["AuctionDB - Scanning"])
 		TSMAPI:UpdateSidebarStatusBar(0)
 		TSMAPI:UpdateSidebarStatusBar(0, true)
 		Scan:StartGetAllScan()
@@ -395,11 +396,11 @@ function Scan:RunScan()
 	end
 
 	if #(scanQueue) == 0 then
-		return TSM:Print("Nothing to scan.")
+		return TSM:Print(L["Nothing to scan."])
 	end
 	
 	if not CanSendAuctionQuery() then
-		TSM:Print("Error: AuctionHouse window busy.")
+		TSM:Print(L["Error: AuctionHouse window busy."])
 		return
 	end
 	
@@ -419,7 +420,7 @@ function Scan:RunScan()
 	status.numItems = #(scanQueue)
 	TSMAPI:LockSidebar()
 	TSMAPI:ShowSidebarStatusBar()
-	TSMAPI:SetSidebarStatusBarText("AuctionDB_Scanning")
+	TSMAPI:SetSidebarStatusBarText(L["AuctionDB - Scanning"])
 	TSMAPI:UpdateSidebarStatusBar(0)
 	TSMAPI:UpdateSidebarStatusBar(0, true)
 	
@@ -589,11 +590,11 @@ function Scan:StopScanning(interupted)
 	TSMAPI:HideSidebarStatusBar()
 	if interupted then
 		-- fires if the scan was interupted (auction house was closed while scanning)
-		TSM:Print("Scan interupted due to auction house being closed.")
+		TSM:Print(L["Scan interupted due to auction house being closed."])
 	else
 		-- fires if the scan completed sucessfully
 		-- validates the scan data
-		TSM:Print("Scan complete!")
+		TSM:Print(L["Scan complete!"])
 		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
 			TSM.data[itemID].lastSeen = time()
@@ -626,7 +627,7 @@ function Scan:StartGetAllScan()
 				TSMAPI:UpdateSidebarStatusBar(floor((1+(self.num-self.numShown)/self.numShown)*100 + 0.5))
 				
 				if self.num == self.numShown then
-					if self.num == 42554 then TSM:Print("|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result possibly hundreds of items may have been missed. Please use regular scans until blizzard fixes this bug.") end
+					if self.num == 42554 then TSM:Print(L["|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result, thousands of items may have been missed. Please use regular scans until blizzard fixes this bug."]) end
 					self:Hide()
 					Scan:StopScanning()
 					break

@@ -4,6 +4,7 @@ TSM = LibStub("AceAddon-3.0"):NewAddon(TSM, "TradeSkillMaster_AuctionDB", "AceEv
 local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
 
 TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB","X-Curse-Packaged-Version") or GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Version") -- current version of the addon
+local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
 local BASE_DELAY = 0.05
 
@@ -33,9 +34,8 @@ function TSM:OnInitialize()
 	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
-	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
-	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, "resets the data", true)
-	TSMAPI:RegisterSlashCommand("adblookup", TSM.Lookup, "prints out information about a given item", true)
+	TSMAPI:RegisterIcon(L["AuctionDB"], "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
+	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["resets the data"], true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSMAPI:RegisterData("playerauctions", TSM.GetPlayerAuctions)
 	TSMAPI:RegisterData("auctionplayers", TSM.GetPlayers)
@@ -79,9 +79,9 @@ function TSM:LoadTooltip(itemID)
 	local marketValue, seenCount, lastSeen, stdDev, minBuyout = TSMAPI:GetData("market", itemID)
 	
 	if marketValue and minBuyout and seenCount then
-		return {"AuctionDB Market Value: |cffffffff"..FormatMoneyText(marketValue),
-			"AuctionDB Min Buyout: |cffffffff"..FormatMoneyText(minBuyout),
-			"AuctionDB Seen Count: |cffffffff"..seenCount}
+		return {L["AuctionDB Market Value:"].." |cffffffff"..FormatMoneyText(marketValue),
+			L["AuctionDB Min Buyout:"].." |cffffffff"..FormatMoneyText(minBuyout),
+			L["AuctionDB Seen Count:"].." |cffffffff"..seenCount}
 	end
 end
 
@@ -98,16 +98,6 @@ function TSM:GetData(itemID)
 	if not TSM.data[itemID] then return end
 	local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
 	return TSM.data[itemID].correctedMean, TSM.data[itemID].quantity, TSM.data[itemID].lastSeen, stdDev, TSM.data[itemID].minBuyout
-end
-
-function TSM:Lookup(itemID)
-	local name, link = GetItemInfo(itemID)
-	itemID = TSMAPI:GetItemID(link)
-	if not TSM.data[itemID] then return TSM:Print("No data for that item") end
-	local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
-	local value = floor(TSM.data[itemID].correctedMean/100+0.5)/100
-	TSM:Print(name .. " has a market value of " .. value .. "gold and was seen " .. (TSM.data[itemID].quantity or "???") ..
-		" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
 end
 
 function TSM:SetQuantity(itemID, quantity)
@@ -204,7 +194,7 @@ function TSM:LoadGUI(parent)
 	
 	local checkBox = AceGUI:Create("CheckBox")
 	checkBox:SetFullWidth(true)
-	checkBox:SetLabel("Enable display of AuctionDB data in tooltip.")
+	checkBox:SetLabel(L["Enable display of AuctionDB data in tooltip."])
 	checkBox:SetValue(TSM.db.profile.tooltip)
 	checkBox:SetCallback("OnValueChanged", function(_,_,value)
 			if value then
@@ -232,9 +222,9 @@ function TSM:LoadGUI(parent)
 	
 	local editBox = AceGUI:Create("EditBox")
 	editBox:SetWidth(200)
-	editBox:SetLabel("Item Lookup:")
+	editBox:SetLabel(L["Item Lookup:"])
 	editBox:SetCallback("OnEnterPressed", function(_,_,value)
-			if not value then return TSM:Print("No data for that item") end
+			if not value then return TSM:Print(L["No data for that item"]) end
 			local itemID
 			local name, link = GetItemInfo(value)
 			if not link then
@@ -247,11 +237,11 @@ function TSM:LoadGUI(parent)
 			else
 				itemID = TSMAPI:GetItemID(link)
 			end
-			if not TSM.data[itemID] then return TSM:Print("No data for that item") end
+			if not TSM.data[itemID] then return TSM:Print(L["No data for that item"]) end
 			local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
-			local value = CopperToGold(TSM.data[itemID].correctedMean)
-			text:SetText((name or value) .. " has a market value of " .. value .. " and was seen " .. (TSM.data[itemID].quantity or "???") ..
-				" times last scan and " .. TSM.data[itemID].n .. " times total. The stdDev is " .. stdDev .. ".")
+			local cost = CopperToGold(TSM.data[itemID].correctedMean)
+			text:SetText(L["%s has a market value of %s and was seen %s times last scan and %s times total. The stdDev is %s."],
+				(name or value), cost, (TSM.data[itemID].quantity or "???"), TSM.data[itemID].n, stdDev)
 		end)
 	container:AddChild(editBox, text)
 end
