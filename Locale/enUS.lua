@@ -43,4 +43,4 @@ L["Error: AuctionHouse window busy."] = true
 L["AuctionDB - Scanning"] = true
 L["Scan interupted due to auction house being closed."] = true
 L["Scan complete!"] = true
-L["|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result, thousands of items may have been missed. Please use regular scans until blizzard fixes this bug."]
+L["|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result, thousands of items may have been missed. Please use regular scans until blizzard fixes this bug."] = true
