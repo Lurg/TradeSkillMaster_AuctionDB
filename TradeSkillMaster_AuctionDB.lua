@@ -197,6 +197,7 @@ function TSM:LoadGUI(parent)
 	checkBox:SetLabel(L["Enable display of AuctionDB data in tooltip."])
 	checkBox:SetValue(TSM.db.profile.tooltip)
 	checkBox:SetCallback("OnValueChanged", function(_,_,value)
+			TSM.db.profile.tooltip = value
 			if value then
 				TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
 			else
