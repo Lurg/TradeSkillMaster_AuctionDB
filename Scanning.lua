@@ -42,6 +42,7 @@ CATEGORIES[L["Leatherworking"]] = {"2$1$13", "2$3", "2$4", "6$1", "6$3", "6$12",
 CATEGORIES[L["Tailoring"]] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
 CATEGORIES[L["Engineering"]] = {"5", "6$6", "6$9"}
 CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$13"}
+CATEGORIES[L["Complete AH Scan"]] = {"0"} -- scans the entire AH
 
 local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
 
@@ -364,6 +365,11 @@ function Scan:RunScan()
 	
 	-- builds the scanQueue
 	for name, selected in pairs(TSM.db.profile.scanSelections) do
+		-- if we are doing a complete AH scan then no need to figure out what else we want to scan
+		if name == L["Complete AH Scan"] then
+			scanQueue = {{id=1, class=0, subClass=0, invSlot=0}}
+			break
+		end
 		if selected then
 			for i=1, #(CATEGORIES[name]) do
 				local class, subClass, invSlot = strsplit("$", CATEGORIES[name][i])

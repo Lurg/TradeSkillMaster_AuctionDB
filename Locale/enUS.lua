@@ -22,6 +22,7 @@ L["Leatherworking"] = true
 L["Tailoring"] = true
 L["Engineering"] = true
 L["Cooking"] = true
+L["Complete AH Scan"] = true
 L["AuctionDB - Run Scan"] = true
 L["Ready in %s min and %s sec"] = true
 L["Not Ready"] = true
