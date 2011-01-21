@@ -366,7 +366,7 @@ function Scan:RunScan()
 	-- builds the scanQueue
 	for name, selected in pairs(TSM.db.profile.scanSelections) do
 		-- if we are doing a complete AH scan then no need to figure out what else we want to scan
-		if name == L["Complete AH Scan"] then
+		if selected and name == L["Complete AH Scan"] then
 			scanQueue = {{id=1, class=0, subClass=0, invSlot=0}}
 			break
 		end
