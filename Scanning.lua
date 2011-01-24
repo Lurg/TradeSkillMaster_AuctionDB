@@ -40,8 +40,8 @@ CATEGORIES[L["Blacksmithing"]] = {"1$1", "1$2", "1$5", "1$6", "1$7", "1$8", "1$9
 	"2$5", "2$6", "4$6", "6$1", "6$4", "6$7", "6$12", "6$13", "6$14"}
 CATEGORIES[L["Leatherworking"]] = {"2$1$13", "2$3", "2$4", "6$1", "6$3", "6$12", "6$13"}
 CATEGORIES[L["Tailoring"]] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
-CATEGORIES[L["Engineering"]] = {"5", "6$6", "6$9"}
-CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$13"}
+CATEGORIES[L["Engineering"]] = {"1$4", "2$1$2", "2$1$5", "6$9", "6$10"}
+CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$10", "6$13"}
 CATEGORIES[L["Complete AH Scan"]] = {"0"} -- scans the entire AH
 
 local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
