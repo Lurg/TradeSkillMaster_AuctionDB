@@ -370,7 +370,7 @@ function Scan:RunScan()
 			scanQueue = {{id=1, class=0, subClass=0, invSlot=0}}
 			break
 		end
-		if selected then
+		if selected and CATEGORIES[name] then
 			for i=1, #(CATEGORIES[name]) do
 				local class, subClass, invSlot = strsplit("$", CATEGORIES[name][i])
 				local valid = false
