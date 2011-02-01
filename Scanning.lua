@@ -599,8 +599,13 @@ function Scan:StopScanning(interupted)
 		TSM:Print(L["Scan interupted due to auction house being closed."])
 	else
 		-- fires if the scan completed sucessfully
-		-- validates the scan data
 		TSM:Print(L["Scan complete!"])
+		
+		-- wipe all the minBuyout data
+		for _, data in pairs(TSM.data) do
+			data.minBuyout = nil
+		end
+		
 		for itemID, data in pairs(Scan.AucData) do
 			TSM:SetQuantity(itemID, data.quantity)
 			TSM.data[itemID].lastSeen = time()
