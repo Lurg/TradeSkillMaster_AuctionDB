@@ -29,12 +29,14 @@ local TSM = select(2, ...)
 local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
+local LAS = TSM.AuctionScanning
+LAS:Embed(Scan)
 
 local BASE_DELAY = 0.10 -- time to delay for before trying to scan a page again when it isn't fully loaded
 local CATEGORIES = {}
 CATEGORIES[L["Enchanting"]] = {"4$6", "6$1", "6$4", "6$7", "6$14"}
 CATEGORIES[L["Inscription"]] = {"5", "6$6", "6$9"}
-CATEGORIES[L["Jewelcrafting"]] = {"6$8", "10"}
+CATEGORIES[L["Jewelcrafting"]] = {"6$8", "8"}
 CATEGORIES[L["Alchemy"]] = {"4$2", "4$3", "4$4", "6$6"}
 CATEGORIES[L["Blacksmithing"]] = {"1$1", "1$2", "1$5", "1$6", "1$7", "1$8", "1$9", "1$13", "1$14", "2$4", 
 	"2$5", "2$6", "4$6", "6$1", "6$4", "6$7", "6$12", "6$13", "6$14"}
@@ -54,6 +56,9 @@ function Scan:OnEnable()
 		
 	Scan:RegisterEvent("AUCTION_HOUSE_CLOSED")
 	Scan:RegisterEvent("AUCTION_HOUSE_SHOW", function() status.AH = true end)
+	Scan:RegisterCallback("results", function() Scan:Lock() LAS:ResolveAuctions("items") end)
+	Scan:RegisterCallback("resolved")
+	Scan:RegisterCallback("unlocked", function() Scan:SendQuery() end)
 end
 
 -- Scan delay for hard reset
@@ -434,36 +439,42 @@ function Scan:RunScan()
 	Scan:SendQuery()
 end
 
+function Scan:resolved()
+	if not status.isScanning then Scan:Unlock() return end
+	Scan:ScanAuctions()
+end
+
 -- sends a query to the AH frame once it is ready to be queried (uses frame as a delay)
 function Scan:SendQuery(forceQueue)
-	status.queued = not CanSendAuctionQuery()
+	if not status.isScanning then return end
+	status.queued = not LAS:CanSendAuctionQuery()
 	if (not status.queued and not forceQueue) then
 		-- stop delay timer
 		frame:Hide()
 		
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
-		Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-		QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
+		--Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
+		LAS:QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
 		frame:Show()
 	end
 end
 
--- gets called whenever the AH window is updated (something is shown in the results section)
-function Scan:AUCTION_ITEM_LIST_UPDATE()
-	if status.isScanning then
-		status.timeDelay = 0
+-- -- gets called whenever the AH window is updated (something is shown in the results section)
+-- function Scan:AUCTION_ITEM_LIST_UPDATE()
+	-- if status.isScanning then
+		-- status.timeDelay = 0
 
-		frame2:Hide()
+		-- frame2:Hide()
 		
-		-- now that our query was successful we can get our data
-		Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-		Scan:ScanAuctions()
-	else
-		Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	end
-end
+		-- -- now that our query was successful we can get our data
+		-- Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
+		-- Scan:ScanAuctions()
+	-- else
+		-- Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
+	-- end
+-- end
 
 -- scans the currently shown page of auctions and collects all the data
 function Scan:ScanAuctions()
@@ -474,46 +485,46 @@ function Scan:ScanAuctions()
 	local totalPages = math.ceil(total / 50)
 	local name, quantity, bid, buyout = {}, {}, {}, {}
 	
-	-- Check for bad data
-	if status.retries < 3 then
-		local badData
+	-- -- Check for bad data
+	-- if status.retries < 3 then
+		-- local badData
 		
-		for i=1, shown do
+		-- for i=1, shown do
 			-- checks whether or not the name of the auctions are valid
 			-- if not, the data is bad
-			name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i] = GetAuctionItemInfo("list", i)
-			if not (name[i] and quantity[i] and bid[i] and buyout[i]) then
-				badData = true
-			end
-		end
+			-- name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i] = GetAuctionItemInfo("list", i)
+			-- if not (name[i] and quantity[i] and bid[i] and buyout[i]) then
+				-- badData = true
+			-- end
+		-- end
 		
-		if badData then
-			if status.hardRetry then
-				-- Hard retry
-				-- re-sends the entire query
-				status.retries = status.retries + 1
-				Scan:SendQuery()
-			else
-				-- Soft retry
-				-- runs a delay and then tries to scan the query again
-				status.timeDelay = status.timeDelay + BASE_DELAY
-				frame2.timeLeft = BASE_DELAY
-				frame2:Show()
+		-- if badData then
+			-- if status.hardRetry then
+				-- -- Hard retry
+				-- -- re-sends the entire query
+				-- status.retries = status.retries + 1
+				-- Scan:SendQuery()
+			-- else
+				-- -- Soft retry
+				-- -- runs a delay and then tries to scan the query again
+				-- status.timeDelay = status.timeDelay + BASE_DELAY
+				-- frame2.timeLeft = BASE_DELAY
+				-- frame2:Show()
 	
-				-- If after 4 seconds of retrying we still don't have data, will go and requery to try and solve the issue
-				-- if we still don't have data, we try to scan it anyway and move on.
-				if status.timeDelay >= 4 then
-					status.hardRetry = true
-					status.retries = 0
-				end
-			end
+				-- -- If after 4 seconds of retrying we still don't have data, will go and requery to try and solve the issue
+				-- -- if we still don't have data, we try to scan it anyway and move on.
+				-- if status.timeDelay >= 4 then
+					-- status.hardRetry = true
+					-- status.retries = 0
+				-- end
+			-- end
 			
-			return
-		end
-	end
+			-- return
+		-- end
+	-- end
 	
-	status.hardRetry = nil
-	status.retries = 0
+	-- status.hardRetry = nil
+	-- status.retries = 0
 	TSMAPI:UpdateSidebarStatusBar(floor(status.page/totalPages*100 + 0.5), true)
 	TSMAPI:UpdateSidebarStatusBar(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5))
 	
@@ -521,14 +532,18 @@ function Scan:ScanAuctions()
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		Scan:AddAuctionRecord(itemID, quantity[i], bid[i], buyout[i])
+		local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", i)
+		Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
+		--Scan:AddAuctionRecord(itemID, quantity[i], bid[i], buyout[i])
 	end
+	
+	Scan:Unlock()
 
 	-- This query has more pages to scan
 	-- increment the page # and send the new query
 	if totalPages > (status.page + 1) then
 		status.page = status.page + 1
-		Scan:SendQuery()
+		--Scan:SendQuery()
 		return
 	end
 	
@@ -548,7 +563,7 @@ function Scan:ScanAuctions()
 		status.id = status.filterList[1].id
 		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
 		status.page = 0
-		Scan:SendQuery()
+		--Scan:SendQuery()
 		return
 	end
 	

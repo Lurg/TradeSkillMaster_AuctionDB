@@ -104,6 +104,78 @@ function TSM:SetQuantity(itemID, quantity)
 	TSM.data[itemID].quantity = quantity
 end
 
+function TSMADBTest()
+	local function GetWeight(dTime, i)
+		-- k here is valued for w value of 0.5 after 5 days
+		-- k = -432000 / log_0.5(i/2)
+		-- a "good" idea would be to precalculate k for values of i either at addon load or with a script
+		--   to cut down on processing time.  Also note that as i -> 2, k -> negative infinity
+		--   so we'd like to avoid i <= 2
+		if dTime < 3600 then return (i-1)/i end
+		local s = 5*24*60*60 -- 5 days
+		local k = -s/(log(i/2)/log(0.5))
+		return (i-i^(dTime/(dTime + k)))/i
+	end
+	
+	local function OneIteration(item, x) -- x is the market price in the current iteration
+		item.n = item.n + 1  -- partially from wikipedia;  cc-by-sa license
+		local dTime = time() - item.lastSeen
+		local delta = x - item.uncorrectedMean
+		item.uncorrectedMean = item.uncorrectedMean + delta/item.n
+		item.M2 = item.M2 + delta*(x - item.uncorrectedMean)
+		local stdDev = nil
+		if item.n ~= 1 then
+			stdDev = sqrt(item.M2/(item.n - 1))
+		end
+		local c = 1.5
+		if stdDev and stdDev ~= 0 then -- some more filtering just to make sure anyone trying to reset a market
+			if stdDev > 2*item.correctedMean then c = 1 end -- doesn't get through to us!
+			if stdDev > 4*item.correctedMean then c = 0.7 end
+		end
+		if not stdDev or stdDev==0 or item.correctedMean == 0 or item.n <= 2 then
+			item.correctedMean = item.uncorrectedMean
+			if item.n == 2 then item.filtered = true end
+		elseif (stdDev ~= 0 and item.correctedMean ~= 0 and (stdDev*c + item.correctedMean) > x and (item.correctedMean - stdDev*c) < x and item.n > 2) or item.filtered then
+			local w = GetWeight(dTime, item.n)
+			item.correctedMean = w*item.correctedMean + (1-w)*x
+			if stdDev > 1.5*abs(item.correctedMean - x) then item.filtered = false end
+		end
+	end
+	
+	
+	
+	local data = {1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,5,5, 100}
+	local item = {n=0, uncorrectedMean=0, correctedMean=0, M2=0, lastSeen=time(), filtered=false}
+	
+	--for i=#data, 1, -1 do
+	for i=1, #data do
+		if i < 0.5*#data or data[i] < max((item.correctedMean*1.5), 10) then
+			print(data[i], item.correctedMean)
+			OneIteration(item, data[i])
+		end
+	end
+	print(item.correctedMean, item.uncorrectedMean, item.M2, sqrt(item.M2/(item.n - 1)))
+	print("--------")
+	item.lastSeen = time()-60*60*60
+	
+	local mean = 0
+	local average = item.correctedMean
+	while(abs(mean - average) > 0.01) do
+		mean = average
+		average = 0
+		for i=1, #data do
+			average = average + ((data[i]+mean)/2)/(#data)
+		end
+		print(average, abs(average-mean))
+	end
+	
+	-- --for i=#data, 1, -1 do
+	-- for i=1, #data do
+		-- OneIteration(item, data[i]+2)
+	-- end
+	-- print(item.correctedMean, item.uncorrectedMean, item.M2, sqrt(item.M2/(item.n - 1)))
+end
+
 function TSM:OneIteration(x, itemID) -- x is the market price in the current iteration
 	TSM.data[itemID] = TSM.data[itemID] or {n=0, uncorrectedMean=0, correctedMean=0, M2=0, lastSeen=time(), filtered=false}
 	local item = TSM.data[itemID]
