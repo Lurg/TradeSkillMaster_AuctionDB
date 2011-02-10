@@ -27,7 +27,6 @@
 -- load the parent file (TSM) into a local variable and register this file as a module
 local TSM = select(2, ...)
 local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
-local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 local LAS = TSM.AuctionScanning
 LAS:Embed(Scan)
@@ -51,8 +50,6 @@ local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
 -- initialize a bunch of variables and frames used throughout the module and register some events
 function Scan:OnEnable()
 	Scan.AucData = {}
-	TSMAPI:RegisterSidebarFunction("TradeSkillMaster_AuctionDB", "auctionDBScan", "Interface\\Icons\\Inv_Inscription_WeaponScroll01", 
-		L["AuctionDB - Run Scan"], function(...) Scan:LoadSidebar(...) end, Scan.HideSidebar)
 		
 	Scan:RegisterEvent("AUCTION_HOUSE_CLOSED")
 	Scan:RegisterEvent("AUCTION_HOUSE_SHOW", function() status.AH = true end)
@@ -87,251 +84,6 @@ frame2:SetScript("OnUpdate", function(self, elapsed)
 		end
 	end
 end)
-
-local function CreateLabel(frame, text, fontObject, fontSizeAdjustment, fontStyle, p1, p2, justifyH, justifyV)
-	local label = frame:CreateFontString(nil, "OVERLAY", fontObject)
-	local tFile, tSize = fontObject:GetFont()
-	label:SetFont(tFile, tSize+fontSizeAdjustment, fontStyle)
-	if type(p1) == "table" then
-		label:SetPoint(unpack(p1))
-	elseif type(p1) == "number" then
-		label:SetWidth(p1)
-	end
-	if type(p2) == "table" then
-		label:SetPoint(unpack(p2))
-	elseif type(p2) == "number" then
-		label:SetHeight(p2)
-	end
-	if justifyH then
-		label:SetJustifyH(justifyH)
-	end
-	if justifyV then
-		label:SetJustifyV(justifyV)
-	end
-	label:SetText(text)
-	label:SetTextColor(1, 1, 1, 1)
-	return label
-end
-
-local function AddHorizontalBar(parent, ofsy)
-	local barFrame = CreateFrame("Frame", nil, parent)
-	barFrame:SetPoint("TOPLEFT", 4, ofsy)
-	barFrame:SetPoint("TOPRIGHT", -4, ofsy)
-	barFrame:SetHeight(8)
-	local horizontalBarTex = barFrame:CreateTexture()
-	horizontalBarTex:SetAllPoints(barFrame)
-	horizontalBarTex:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
-	horizontalBarTex:SetTexCoord(0.577, 0.683, 0.145, 0.309)
-	horizontalBarTex:SetVertexColor(0, 0, 0.7, 1)
-end
-
-local function ApplyTexturesToButton(btn, isOpenCloseButton)
-	local texture = "Interface\\TokenFrame\\UI-TokenFrame-CategoryButton"
-	local offset = 6
-	if isopenCloseButton then
-		offset = 5
-		texture = "Interface\\Buttons\\UI-AttributeButton-Encourage-Hilight"
-	end
-	
-	local normalTex = btn:CreateTexture()
-	normalTex:SetTexture(texture)
-	normalTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
-	normalTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
-	
-	local disabledTex = btn:CreateTexture()
-	disabledTex:SetTexture(texture)
-	disabledTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
-	disabledTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
-	disabledTex:SetVertexColor(0.1, 0.1, 0.1, 1)
-	
-	local highlightTex = btn:CreateTexture()
-	highlightTex:SetTexture(texture)
-	highlightTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
-	highlightTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
-	
-	local pressedTex = btn:CreateTexture()
-	pressedTex:SetTexture(texture)
-	pressedTex:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -offset, -offset)
-	pressedTex:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", offset, offset)
-	pressedTex:SetVertexColor(1, 1, 1, 0.5)
-	
-	if isopenCloseButton then
-		normalTex:SetTexCoord(0.041, 0.975, 0.129, 1.00)
-		disabledTex:SetTexCoord(0.049, 0.931, 0.008, 0.121)
-		highlightTex:SetTexCoord(0, 1, 0, 1)
-		highlightTex:SetVertexColor(0.9, 0.9, 0.9, 0.9)
-		pressedTex:SetTexCoord(0.035, 0.981, 0.014, 0.670)
-		btn:SetPushedTextOffset(0, -1)
-	else
-		normalTex:SetTexCoord(0.049, 0.958, 0.066, 0.244)
-		disabledTex:SetTexCoord(0.049, 0.958, 0.066, 0.244)
-		highlightTex:SetTexCoord(0.005, 0.994, 0.613, 0.785)
-		highlightTex:SetVertexColor(0.5, 0.5, 0.5, 0.7)
-		pressedTex:SetTexCoord(0.0256, 0.743, 0.017, 0.158)
-		btn:SetPushedTextOffset(0, -2)
-	end
-	
-	btn:SetNormalTexture(normalTex)
-	btn:SetDisabledTexture(disabledTex)
-	btn:SetHighlightTexture(highlightTex)
-	btn:SetPushedTexture(pressedTex)
-end
-
--- Tooltips!
-local function ShowTooltip(self)
-	if self.link then
-		GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
-		GameTooltip:SetHyperlink(self.link)
-		GameTooltip:Show()
-	elseif self.tooltip then
-		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-		GameTooltip:SetText(self.tooltip, 1, 1, 1, 1, true)
-		GameTooltip:Show()
-	else
-		GameTooltip:SetOwner(self.frame, "ANCHOR_BOTTOMRIGHT")
-		GameTooltip:SetText(self.frame.tooltip, 1, 1, 1, 1, true)
-		GameTooltip:Show()
-	end
-end
-
-local function HideTooltip()
-	GameTooltip:Hide()
-end
-
-local function CreateButton(text, parentFrame, frameName, inheritsFrame, width, height, point, arg1, arg2)
-	local btn = CreateFrame("Button", frameName, parentFrame, inheritsFrame)
-	btn:SetHeight(height or 0)
-	btn:SetWidth(width or 0)
-	btn:SetPoint(unpack(point))
-	btn:SetText(text)
-	btn:Raise()
-	btn:GetFontString():SetPoint("CENTER")
-	local tFile, tSize = GameFontHighlight:GetFont()
-	btn:GetFontString():SetFont(tFile, tSize, "OUTLINE")
-	btn:GetFontString():SetTextColor(1, 1, 1, 1)
-	if type(arg1) == "string" then
-		btn.tooltip = arg1
-		btn:SetScript("OnEnter", ShowTooltip)
-		btn:SetScript("OnLeave", HideTooltip)
-	elseif type(arg2) == "string" then
-		btn:SetPoint(unpack(arg1))
-		btn.tooltip = arg2
-		btn:SetScript("OnEnter", ShowTooltip)
-		btn:SetScript("OnLeave", HideTooltip)
-	end
-	btn:SetBackdrop({
-			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-			edgeSize = 18,
-			insets = {left = 0, right = 0, top = 0, bottom = 0},
-		})
-	btn:SetScript("OnDisable", function(self) self:GetFontString():SetTextColor(0.5, 0.5, 0.5, 1) end)
-	btn:SetScript("OnEnable", function(self) self:GetFontString():SetTextColor(1, 1, 1, 1) end)
-	ApplyTexturesToButton(btn)
-	return btn
-end
-
-local function CreateCheckBox(parent, label, width, point, tooltip)
-	local cb = AceGUI:Create("TSMCheckBox")
-	cb:SetType("checkbox")
-	cb:SetWidth(width)
-	cb:SetLabel(label)
-	cb.frame:SetParent(parent)
-	cb.frame:SetPoint(unpack(point))
-	cb.frame:Show()
-	cb.frame.tooltip = tooltip
-	cb:SetCallback("OnEnter", ShowTooltip)
-	cb:SetCallback("OnLeave", HideTooltip)
-	return cb
-end
-
-function Scan:LoadSidebar(frame)
-	local function GetAllReady()
-		if not select(2, CanSendAuctionQuery()) then
-			local previous = TSM.db.profile.lastGetAll or 1/0
-			if previous > (time() - 15*60) then
-				local diff = previous + 15*60 - time()
-				local diffMin = math.floor(diff/60)
-				local diffSec = diff - diffMin*60
-				return "|cffff0000"..format(L["Ready in %s min and %s sec"], diffMin, diffSec), false
-			else
-				return "|cffff0000"..L["Not Ready"], false
-			end
-		else
-			return "|cff00ff00"..L["Ready"], true
-		end
-	end
-
-	if not Scan.frame then
-		local container = CreateFrame("Frame", nil, frame)
-		container:SetAllPoints(frame)
-		container:Raise()
-		
-		-- title text and first horizontal bar
-		container.title = CreateLabel(container, L["AuctionDB - Auction House Scanning"], GameFontHighlight, 0, "OUTLINE", 300, {"TOP", 0, -20})
-		AddHorizontalBar(container, -50)
-		
-		-- "Run <Regular/GetAll>s Scan" button + another horizontal bar
-		local button = CreateButton(L["Run Scan"], container, "TSMAuctionDBRunScanButton", "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
-			L["Starts scanning the auction house based on the below settings.\n\nIf you are running a GetAll scan, your game client may temporarily lock up."])
-		button:SetScript("OnClick", Scan.RunScan)
-		container.startScanButton = button
-		AddHorizontalBar(container, -110)
-		
-		-- GetAll scan checkbox + label
-		local cb = CreateCheckBox(container, L["Run GetAll Scan if Possible"], 200, {"TOPLEFT", 12, -130}, L["If checked, a GetAll scan will be used whenever possible.\n\nWARNING: With any GetAll scan there is a risk you may get disconnected from the game."])
-		cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.getAll = value end)
-		container.getAllCheckBox = cb
-		container.getAllLabel = CreateLabel(container, "", GameFontHighlight, 0, nil, 300, {"TOPLEFT", 12, -160}, "LEFT")
-		
-		-- timer frame for updating the getall label as well as the "Run <Regular/GetAll> Scan" button + another horizontal bar
-		local timer = CreateFrame("Frame", nil, container)
-		timer.timeLeft = 0
-		timer:SetScript("OnUpdate", function(self, elapsed)
-				self.timeLeft = self.timeLeft - elapsed
-				if self.timeLeft <= 0 then
-					self.timeLeft = 1
-					if status.isScanning then return end
-					local readyText, isReady = GetAllReady()
-					Scan.frame.getAllLabel:SetText("|cffffbb00"..L["GetAll Scan:"].." "..readyText)
-					if isReady and TSM.db.profile.getAll then
-						Scan.frame.startScanButton:SetText(L["Run GetAll Scan"])
-					else
-						Scan.frame.startScanButton:SetText(L["Run Regular Scan"])
-					end
-				end
-			end)
-		AddHorizontalBar(container, -180)
-		
-		container.professionLabel = CreateLabel(container, L["Professions to scan for:"], GameFontHighlight, 0, nil, 300, {"TOP", 0, -190})
-		-- profession checkboxes
-		local i = 0
-		local columnStart = frame:GetWidth() / 2
-		for name in pairs(CATEGORIES) do
-			i = i + 1
-			if TSM.db.profile.scanSelections[name] == nil then
-				TSM.db.profile.scanSelections[name] = false
-			end
-			local ofsx = 10+columnStart*((i+1)%2)-- alternating columns
-			local ofsy = -190-ceil(i/2)*25 -- two per row
-			local cb = CreateCheckBox(container, name, 150, {"TOPLEFT", ofsx, ofsy}, L["If checked, a regular scan will scan for this profession."])
-			cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.scanSelections[name] = value end)
-			container[strlower(name).."CheckBox"] = cb
-		end
-		
-		Scan.frame = container
-	end
-	
-	Scan.frame.getAllCheckBox:SetValue(TSM.db.profile.getAll)
-	for name in pairs(CATEGORIES) do
-		Scan.frame[strlower(name).."CheckBox"]:SetValue(TSM.db.profile.scanSelections[name])
-	end
-	
-	Scan.frame:Show()
-end
-
-function Scan:HideSidebar()
-	Scan.frame:Hide()
-end
 
 -- gets called when the AH is closed
 function Scan:AUCTION_HOUSE_CLOSED()
@@ -453,28 +205,12 @@ function Scan:SendQuery(forceQueue)
 		frame:Hide()
 		
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
-		--Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 		LAS:QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
 		frame:Show()
 	end
 end
-
--- -- gets called whenever the AH window is updated (something is shown in the results section)
--- function Scan:AUCTION_ITEM_LIST_UPDATE()
-	-- if status.isScanning then
-		-- status.timeDelay = 0
-
-		-- frame2:Hide()
-		
-		-- -- now that our query was successful we can get our data
-		-- Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-		-- Scan:ScanAuctions()
-	-- else
-		-- Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	-- end
--- end
 
 -- scans the currently shown page of auctions and collects all the data
 function Scan:ScanAuctions()
@@ -483,67 +219,25 @@ function Scan:ScanAuctions()
 		-- # of pages total
 	local shown, total = GetNumAuctionItems("list")
 	local totalPages = math.ceil(total / 50)
-	local name, quantity, bid, buyout = {}, {}, {}, {}
-	
-	-- -- Check for bad data
-	-- if status.retries < 3 then
-		-- local badData
-		
-		-- for i=1, shown do
-			-- checks whether or not the name of the auctions are valid
-			-- if not, the data is bad
-			-- name[i], _, quantity[i], _, _, _, bid[i], _, buyout[i] = GetAuctionItemInfo("list", i)
-			-- if not (name[i] and quantity[i] and bid[i] and buyout[i]) then
-				-- badData = true
-			-- end
-		-- end
-		
-		-- if badData then
-			-- if status.hardRetry then
-				-- -- Hard retry
-				-- -- re-sends the entire query
-				-- status.retries = status.retries + 1
-				-- Scan:SendQuery()
-			-- else
-				-- -- Soft retry
-				-- -- runs a delay and then tries to scan the query again
-				-- status.timeDelay = status.timeDelay + BASE_DELAY
-				-- frame2.timeLeft = BASE_DELAY
-				-- frame2:Show()
-	
-				-- -- If after 4 seconds of retrying we still don't have data, will go and requery to try and solve the issue
-				-- -- if we still don't have data, we try to scan it anyway and move on.
-				-- if status.timeDelay >= 4 then
-					-- status.hardRetry = true
-					-- status.retries = 0
-				-- end
-			-- end
-			
-			-- return
-		-- end
-	-- end
 	
 	-- status.hardRetry = nil
 	-- status.retries = 0
 	TSMAPI:UpdateSidebarStatusBar(floor(status.page/totalPages*100 + 0.5), true)
-	TSMAPI:UpdateSidebarStatusBar(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5))
+	TSMAPI:UpdateSidebarStatusBar(floor((1-(#(status.filterList)-status.page/totalPages)/status.numItems)*100 + 0.5)*.95)
 	
 	-- now that we know our query is good, time to verify and then store our data
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", i)
-		Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
-		--Scan:AddAuctionRecord(itemID, quantity[i], bid[i], buyout[i])
+		local name, _, quantity, _, _, _, _, _, buyout = GetAuctionItemInfo("list", i)
+		Scan:AddAuctionRecord(itemID, quantity, buyout)
 	end
-	
-	Scan:Unlock()
 
 	-- This query has more pages to scan
 	-- increment the page # and send the new query
 	if totalPages > (status.page + 1) then
 		status.page = status.page + 1
-		--Scan:SendQuery()
+		Scan:Unlock()
 		return
 	end
 	
@@ -561,9 +255,9 @@ function Scan:ScanAuctions()
 		status.subClass = status.filterList[1].subClass
 		status.invSlot = status.filterList[1].invSlot
 		status.id = status.filterList[1].id
-		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5))
+		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5)*.95)
 		status.page = 0
-		--Scan:SendQuery()
+		Scan:Unlock()
 		return
 	end
 	
@@ -572,20 +266,15 @@ function Scan:ScanAuctions()
 end
 
 -- Add a new record to the Scan.AucData table
-function Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
+function Scan:AddAuctionRecord(itemID, quantity, buyout)
 	-- Don't add this data if it has no buyout
 	if (not buyout) or (buyout <= 0) then return true end
-	
-	for i=1, quantity do
-		TSM:OneIteration(buyout/quantity, itemID)
-	end
 
 	Scan.AucData[itemID] = Scan.AucData[itemID] or {quantity = 0, records = {}, minBuyout=0}
 	Scan.AucData[itemID].quantity = Scan.AucData[itemID].quantity + quantity
 	
-	-- Calculate the bid / buyout per 1 item
+	-- Calculate the buyout per 1 item
 	buyout = buyout / quantity
-	bid = bid / quantity
 	
 	if (buyout < Scan.AucData[itemID].minBuyout or Scan.AucData[itemID].minBuyout == 0) then
 		Scan.AucData[itemID].minBuyout = buyout
@@ -593,46 +282,42 @@ function Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
 	
 	-- No sense in using a record for each entry if they are all the exact same data
 	for _, record in pairs(Scan.AucData[itemID].records) do
-		if (record.buyout == buyout and record.bid == bid) then
-			record.buyout = buyout
-			record.bid = bid
+		if record.buyout == buyout then
 			record.quantity = record.quantity + quantity
+			-- yes this sort is inefficient but it will never be nearly bad enough to slow down a scan
+			sort(Scan.AucData[itemID].records, function(a, b) return a.buyout < b.buyout end)
 			return
 		end
 	end
 	
 	-- Create a new entry in the table
-	tinsert(Scan.AucData[itemID].records, {buyout = buyout, bid = bid, quantity = quantity})
+	tinsert(Scan.AucData[itemID].records, {buyout = buyout, quantity = quantity})
 end
 
 -- stops the scan because it was either interupted or it was completed successfully
 function Scan:StopScanning(interupted)
-	TSMAPI:UnlockSidebar()
-	TSMAPI:HideSidebarStatusBar()
 	if interupted then
 		-- fires if the scan was interupted (auction house was closed while scanning)
 		TSM:Print(L["Scan interupted due to auction house being closed."])
 	else
 		-- fires if the scan completed sucessfully
 		TSM:Print(L["Scan complete!"])
-		
-		-- wipe all the minBuyout data
-		for _, data in pairs(TSM.data) do
-			data.minBuyout = nil
-		end
-		
-		for itemID, data in pairs(Scan.AucData) do
-			TSM:SetQuantity(itemID, data.quantity)
-			TSM.data[itemID].lastSeen = time()
-			TSM.data[itemID].minBuyout = data.minBuyout
-		end
+		TSM:ProcessData(Scan.AucData)
 	end
+	
+	Scan:Unlock()
+	TSMAPI:UnlockSidebar()
+	TSMAPI:HideSidebarStatusBar()
 	
 	status.isScanning = nil
 	status.queued = nil
 	
 	frame:Hide()
 	frame2:Hide()
+end
+
+function Scan:IsScanning()
+	return status.isScanning
 end
 	
 function Scan:StartGetAllScan()
@@ -647,8 +332,8 @@ function Scan:StartGetAllScan()
 			for i=1, 200 do
 				self.num = self.num + 1
 				local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", self.num))
-				local name, _, quantity, _, _, _, bid, _, buyout = GetAuctionItemInfo("list", self.num)
-				Scan:AddAuctionRecord(itemID, quantity, bid, buyout)
+				local name, _, quantity, _, _, _, _, _, buyout = GetAuctionItemInfo("list", self.num)
+				Scan:AddAuctionRecord(itemID, quantity, buyout)
 				TSMAPI:UpdateSidebarStatusBar(100-floor(i/2), true)
 				TSMAPI:UpdateSidebarStatusBar(floor((1+(self.num-self.numShown)/self.numShown)*100 + 0.5))
 				
