@@ -123,7 +123,7 @@ end
 	-- local test = {100,200,200,300,300,300,300,400,400,400,400,400,400,400,500,500,500,500,600,600,700, 12000}
 	-- local records = {}
 	
-	-- for i=0, 14 do
+	-- for i=0, 1 do
 		-- TSM.data[1] = nil
 		-- wipe(records)
 		-- for _, num in ipairs(test) do
@@ -153,9 +153,16 @@ function TSM:ProcessData(scanData, isTest)
 	
 	-- go through each item and figure out the market value / update the data table
 	for itemID, data in pairs(scanData) do
-		local marketValue, num = TSM:CalculateMarketValue(data.records, itemID)
+		local records = {}
+		for _, record in pairs(data.records) do
+			for i=1, record.quantity do
+				tinsert(records, record.buyout)
+			end
+		end
+	
+		local marketValue, num = TSM:CalculateMarketValue(records, itemID)
 		
-		if TSM.data[itemID] and TSM.data[itemID].lastScan then
+		if TSM.data[itemID] and TSM.data[itemID].lastScan and TSM.data[itemID].marketValue then
 			local dTime = time() - TSM.data[itemID].lastScan
 			local weight = TSM:GetWeight(dTime, TSM.data[itemID].seen+num)*0.5
 			marketValue = (1-weight)*marketValue + weight*TSM.data[itemID].marketValue
@@ -173,24 +180,28 @@ function TSM:CalculateMarketValue(records, itemID)
 	local totalNum, totalBuyout = 0, 0
 	
 	for i=1, #records do
-		totalBuyout = totalBuyout + records[i].buyout*records[i].quantity
-		totalNum = totalNum + records[i].quantity
+		if not (i == 1 or i < (#records)*0.5 or records[i] < 1.5*records[i-1]) then
+			totalNum = i - 1
+			break
+		end
+		
+		totalBuyout = totalBuyout + records[i]
 	end
 	
 	local uncorrectedMean = totalBuyout / totalNum
 	local varience = 0
 	
 	for i=1, #records do
-		varience = varience + (records[i].buyout-uncorrectedMean)^2
+		varience = varience + (records[i]-uncorrectedMean)^2
 	end
 	
 	local stdDev = sqrt(varience/totalNum)
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
 	
 	for i=1, #records do
-		if abs(uncorrectedMean - records[i].buyout) < 1.5*stdDev then
-			correctedTotalNum = correctedTotalNum + records[i].quantity
-			correctedTotalBuyout = correctedTotalBuyout + records[i].buyout*records[i].quantity
+		if abs(uncorrectedMean - records[i]) < 1.5*stdDev then
+			correctedTotalNum = correctedTotalNum + 1
+			correctedTotalBuyout = correctedTotalBuyout + records[i]
 		end
 	end
 	
@@ -200,13 +211,13 @@ function TSM:CalculateMarketValue(records, itemID)
 end
 
 function TSM:GetWeight(dTime, i)
-	-- k here is valued for w value of 0.5 after 5 days
-	-- k = -432000 / log_0.5(i/2)
+	-- k here is valued for w value of 0.5 after 2 days
+	-- k = -172800 / log_0.5(i/2)
 	-- a "good" idea would be to precalculate k for values of i either at addon load or with a script
 	--   to cut down on processing time.  Also note that as i -> 2, k -> negative infinity
 	--   so we'd like to avoid i <= 2
 	if dTime < 3600 then return (i-1)/i end
-	local s = 2*24*60*60 -- 5 days
+	local s = 2*24*60*60 -- 2 days
 	local k = -s/(log(i/2)/log(0.5))
 	return (i-i^(dTime/(dTime + k)))/i
 end
