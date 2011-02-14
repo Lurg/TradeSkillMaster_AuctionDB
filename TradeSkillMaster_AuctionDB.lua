@@ -230,7 +230,9 @@ end
 function TSM:Serialize()
 	local results = {}
 	for id, v in pairs(TSM.data) do
-		tinsert(results, "q" .. id .. "," .. v.seen .. "," .. v.marketValue .. "," .. v.lastScan .. "," .. (v.currentQuantity or 0) .. "," .. (v.minBuyout or "n"))
+		if v.marketValue then
+			tinsert(results, "q" .. id .. "," .. v.seen .. "," .. v.marketValue .. "," .. v.lastScan .. "," .. (v.currentQuantity or 0) .. "," .. (v.minBuyout or "n"))
+		end
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
