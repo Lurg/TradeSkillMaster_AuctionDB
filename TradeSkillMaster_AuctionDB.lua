@@ -180,25 +180,30 @@ function TSM:CalculateMarketValue(records, itemID)
 	local totalNum, totalBuyout = 0, 0
 	
 	for i=1, #records do
+		totalNum = i - 1
 		if not (i == 1 or i < (#records)*0.5 or records[i] < 1.5*records[i-1]) then
-			totalNum = i - 1
 			break
 		end
 		
 		totalBuyout = totalBuyout + records[i]
+		if i == #records then
+			totalNum = i
+		end
 	end
 	
 	local uncorrectedMean = totalBuyout / totalNum
 	local varience = 0
 	
-	for i=1, #records do
+	for i=1, totalNum do
 		varience = varience + (records[i]-uncorrectedMean)^2
 	end
+	
+	if uncorrectedMean == 1/0 or uncorrectedMean == 0 then print("ERROR", totalBuyout, totalNum) end
 	
 	local stdDev = sqrt(varience/totalNum)
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
 	
-	for i=1, #records do
+	for i=1, totalNum do
 		if abs(uncorrectedMean - records[i]) < 1.5*stdDev then
 			correctedTotalNum = correctedTotalNum + 1
 			correctedTotalBuyout = correctedTotalBuyout + records[i]
