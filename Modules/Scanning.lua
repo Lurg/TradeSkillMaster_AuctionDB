@@ -30,6 +30,7 @@ local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 local LAS = TSM.AuctionScanning
 LAS:Embed(Scan)
+local QueryAuctionItems = QueryAuctionItems
 
 local BASE_DELAY = 0.10 -- time to delay for before trying to scan a page again when it isn't fully loaded
 local CATEGORIES = {}
@@ -322,6 +323,12 @@ end
 	
 function Scan:StartGetAllScan()
 	TSM.db.profile.lastGetAll = time()
+	if TSM.db.profile.blockAuc then
+		local ok, func = pcall(function() return AucAdvanced.Scan.Private.Hook.QueryAuctionItems end)
+		QueryAuctionItems = (ok and func) or QueryAuctionItems
+	else
+		QueryAuctionItems = _G.QueryAuctionItems
+	end
 	QueryAuctionItems("", "", "", nil, nil, nil, nil, nil, nil, true)
 	
 	local scanFrame = CreateFrame("Frame")

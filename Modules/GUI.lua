@@ -14,28 +14,6 @@ end
 
 -- options page
 function GUI:LoadGUI(parent)
-	--Truncate will leave off silver or copper if gold is greater than 100.
-	local function CopperToGold(c)
-		local GOLD_TEXT = "\124cFFFFD700g\124r"
-		local SILVER_TEXT = "\124cFFC7C7CFs\124r"
-		local COPPER_TEXT = "\124cFFEDA55Fc\124r"
-		local g = floor(c/10000)
-		local s = floor(mod(c/100,100))
-		c = floor(mod(c, 100))
-		local moneyString = ""
-		if g > 0 then
-			moneyString = format("%d%s", g, GOLD_TEXT)
-		end
-		if s > 0 and (g < 100) then
-			moneyString = format("%s%d%s", moneyString, s, SILVER_TEXT)
-		end
-		if c > 0 and (g < 100) then
-			moneyString = format("%s%d%s", moneyString, c, COPPER_TEXT)
-		end
-		if moneyString == "" then moneyString = "0"..COPPER_TEXT end
-		return moneyString
-	end
-
 	local container = AceGUI:Create("SimpleGroup")
 	container:SetLayout("list")
 	parent:AddChild(container)
@@ -64,40 +42,14 @@ function GUI:LoadGUI(parent)
 	spacer:SetText(" ")
 	container:AddChild(spacer)
 	
-	local spacer = AceGUI:Create("Label")
-	spacer:SetFullWidth(true)
-	spacer:SetText(" ")
-	container:AddChild(spacer)
-	
-	local text = AceGUI:Create("Label")
-	text:SetFullWidth(true)
-	text:SetFontObject(GameFontNormalLarge)
-	container:AddChild(text)
-	
-	local editBox = AceGUI:Create("EditBox")
-	editBox:SetWidth(200)
-	editBox:SetLabel(L["Item Lookup:"])
-	editBox:SetCallback("OnEnterPressed", function(_,_,value)
-			if not value then return TSM:Print(L["No data for that item"]) end
-			local itemID
-			local name, link = GetItemInfo(value)
-			if not link then
-				for ID in pairs(TSM.data) do
-					local name = GetItemInfo(ID)
-					if name == value then
-						itemID = ID
-					end
-				end
-			else
-				itemID = TSMAPI:GetItemID(link)
-			end
-			if not TSM.data[itemID] then return TSM:Print(L["No data for that item"]) end
-			local stdDev = sqrt(TSM.data[itemID].M2/(TSM.data[itemID].n - 1))
-			local cost = CopperToGold(TSM.data[itemID].correctedMean)
-			text:SetText(L["%s has a market value of %s and was seen %s times last scan and %s times total. The stdDev is %s."],
-				(name or value), cost, (TSM.data[itemID].quantity or "???"), TSM.data[itemID].n, stdDev)
+	local checkBox = AceGUI:Create("CheckBox")
+	checkBox:SetFullWidth(true)
+	checkBox:SetLabel(L["Block Auctioneer while Scanning."])
+	checkBox:SetValue(TSM.db.profile.blockAuc)
+	checkBox:SetCallback("OnValueChanged", function(_,_,value)
+			TSM.db.profile.blockAuc = value
 		end)
-	container:AddChild(editBox, text)
+	container:AddChild(checkBox)
 end
 
 -- sidebar stuff

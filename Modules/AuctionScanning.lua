@@ -134,6 +134,13 @@ end
 -- Hook of QueryAuctionItems function
 -- returns true if the query was sent (if we can query)
 function lib:QueryAuctionItems(...)
+	if TSM.db.profile.blockAuc then
+		local ok, func = pcall(function() return AucAdvanced.Scan.Private.Hook.QueryAuctionItems end)
+		QueryAuctionItems = (ok and func) or QueryAuctionItems
+	else
+		QueryAuctionItems = _G.QueryAuctionItems
+	end
+
 	if lib:CanSendAuctionQuery() then
 		lib.currentQuery = {...}
 		QueryAuctionItems(...)

@@ -16,6 +16,7 @@ local savedDBDefaults = {
 		scanSelections = {},
 		getAll = false,
 		tooltip = true,
+		blockAuc = false,
 	},
 }
 

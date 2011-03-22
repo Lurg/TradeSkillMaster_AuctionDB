@@ -9,9 +9,7 @@ L["AuctionDB Market Value:"] = true
 L["AuctionDB Min Buyout:"] = true
 L["AuctionDB Seen Count:"] = true
 L["Enable display of AuctionDB data in tooltip."] = true
-L["Item Lookup:"] = true
-L["No data for that item"] = true
-L["%s has a market value of %s and was seen %s times last scan and %s times total. The stdDev is %s."] = true
+L["Block Auctioneer while Scanning."] = true
 
 -- Scanning.lua
 L["Enchanting"] = true
