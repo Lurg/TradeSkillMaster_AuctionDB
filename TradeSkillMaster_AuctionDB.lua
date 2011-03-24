@@ -95,14 +95,22 @@ local function FormatMoneyText(c)
 	return moneyString
 end
 
-function TSM:LoadTooltip(itemID)
-	local marketValue, currentQuantity, lastScan, totalSeen, minBuyout = TSMAPI:GetData("market", itemID)
+function TSM:LoadTooltip(itemID, quantity)
+	local marketValue, _, lastScan, totalSeen, minBuyout = TSM:GetData(itemID)
+	if not (marketValue and minBuyout and totalSeen) then return end
 	
-	if marketValue and minBuyout and totalSeen then
-		return {L["AuctionDB Market Value:"].." |cffffffff"..FormatMoneyText(marketValue),
-			L["AuctionDB Min Buyout:"].." |cffffffff"..FormatMoneyText(minBuyout),
-			L["AuctionDB Seen Count:"].." |cffffffff"..totalSeen}
+	local marketValueText, minBuyoutText
+	if quantity and quantity > 1 then
+		marketValueText = FormatMoneyText(marketValue).." ("..FormatMoneyText(marketValue*quantity)..")"
+		minBuyoutText = FormatMoneyText(minBuyout).." ("..FormatMoneyText(minBuyout*quantity)..")"
+	else
+		marketValueText = FormatMoneyText(marketValue)
+		minBuyoutText = FormatMoneyText(minBuyout)
 	end
+		
+	return {L["AuctionDB Market Value:"].." |cffffffff"..marketValueText,
+		L["AuctionDB Min Buyout:"].." |cffffffff"..minBuyoutText,
+		L["AuctionDB Seen Count:"].." |cffffffff"..totalSeen}
 end
 
 function TSM:Reset()

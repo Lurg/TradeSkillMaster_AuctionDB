@@ -1,11 +1,3 @@
---[[
-	This file is licensed separate from the license governing use of this addon as a whole.
-	The license for this file is the GNU General Public License version 2 (GPLv2) as the code
-	within this file is mostly taken from the code for LibAuctionScan-1.0
-	(http://www.wowace.com/addons/libauctionscan/) which is licensed under a different license than
-	the TradeSkillMaster addon. If you have any questions, please contact Sapu94 (sapu94@gmail.com).
-]]
-
 local TSM = select(2, ...)
 local lib = {}
 TSM.AuctionScanning = lib
