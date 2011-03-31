@@ -6,7 +6,10 @@ TSM.AuctionScanning = lib
 local type, assert, error, select, unpack = type, assert, error, select, unpack
 local pairs, ipairs, tinsert = pairs, ipairs, tinsert
 local strlower = strlower
-local CanSendAuctionQuery, GetAuctionItemInfo, GetNumAuctionItems, QueryAuctionItems = CanSendAuctionQuery, GetAuctionItemInfo, GetNumAuctionItems, QueryAuctionItems
+local CanSendAuctionQuery, GetAuctionItemInfo, GetNumAuctionItems = CanSendAuctionQuery, GetAuctionItemInfo, GetNumAuctionItems
+local QueryAuctionItems = QueryAuctionItems
+local origQueryAuctionItems = QueryAuctionItems
+
 
 local BASE_DELAY = 0.1
 
@@ -128,9 +131,9 @@ end
 function lib:QueryAuctionItems(...)
 	if TSM.db.profile.blockAuc then
 		local ok, func = pcall(function() return AucAdvanced.Scan.Private.Hook.QueryAuctionItems end)
-		QueryAuctionItems = (ok and func) or QueryAuctionItems
+		QueryAuctionItems = (ok and func) or origQueryAuctionItems
 	else
-		QueryAuctionItems = _G.QueryAuctionItems
+		QueryAuctionItems = origQueryAuctionItems
 	end
 
 	if lib:CanSendAuctionQuery() then
