@@ -200,7 +200,7 @@ end
 
 -- sends a query to the AH frame once it is ready to be queried (uses frame as a delay)
 function Scan:SendQuery(forceQueue)
-	if not status.isScanning then return end
+	if not status.isScanning or status.isScanning == "GetAll" then return end
 	status.queued = not LAS:CanSendAuctionQuery()
 	if (not status.queued and not forceQueue) then
 		-- stop delay timer
