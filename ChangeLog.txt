@@ -1,3 +1,7 @@
+v0.2.2
+*AuctionDB should no longer be blocking Auctioneer when it's not supposed to.
+*Many other minor bug fixes and improvements.
+
 v0.2.1
 *Added an option for preventing Auctioneer from scanning / processing on AuctionDB's scans (recommened).
 *Added more info to the tooltip for stacks of more than 1 to show the min buyout and market value for the entire stack.
