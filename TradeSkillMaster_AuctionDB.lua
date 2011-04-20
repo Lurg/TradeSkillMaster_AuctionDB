@@ -152,11 +152,36 @@ end
 	-- end
 -- end
 
-function TSM:ProcessData(scanData, isTest)
+function TSM:ProcessData(scanData, queue, isTest)
 	if not isTest then
-		-- wipe all the minBuyout data
-		for itemID, data in pairs(TSM.data) do
-			data.minBuyout = nil
+		if queue and #queue > 1 then -- they did a category scan
+			local scannedInfo = {}
+			for i=1, #queue do
+				scannedInfo[tostring(queue[i].class).."@"..tostring(queue[i].subClass)] = true
+			end
+		
+			local classLookup = {}
+			local subClassLookup = {}
+			for i, class in pairs({GetAuctionItemClasses()}) do
+				for j, subClass in pairs({GetAuctionItemSubClasses(i)}) do
+					subClassLookup[subClass] = j
+				end
+				classLookup[class] = i
+			end
+			
+			-- wipe all the minBuyout data of items that should have been scanned
+			for itemID, data in pairs(TSM.data) do
+				local className, subClassName = select(6, GetItemInfo(itemID))
+				--if className and not classLookup[className] then print(className, itemID) end
+				if not className or scannedInfo[(classLookup[className] or "0").."@"..(subClassLookup[subClassName] or "0")] then
+					data.minBuyout = nil
+				end
+			end
+		else
+			-- wipe all the minBuyout data
+			for itemID, data in pairs(TSM.data) do
+				data.minBuyout = nil
+			end
 		end
 	end
 	

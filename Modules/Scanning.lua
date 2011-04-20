@@ -41,9 +41,9 @@ CATEGORIES[L["Jewelcrafting"]] = {"6$8", "8"}
 CATEGORIES[L["Alchemy"]] = {"4$2", "4$3", "4$4", "6$6"}
 CATEGORIES[L["Blacksmithing"]] = {"1$1", "1$2", "1$5", "1$6", "1$7", "1$8", "1$9", "1$13", "1$14", "2$4", 
 	"2$5", "2$6", "4$6", "6$1", "6$4", "6$7", "6$12", "6$13", "6$14"}
-CATEGORIES[L["Leatherworking"]] = {"2$1$13", "2$3", "2$4", "6$1", "6$3", "6$12", "6$13"}
-CATEGORIES[L["Tailoring"]] = {"2$1$13", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
-CATEGORIES[L["Engineering"]] = {"1$4", "2$1$2", "2$1$5", "6$9", "6$10"}
+CATEGORIES[L["Leatherworking"]] = {"2$1", "2$3", "2$4", "6$1", "6$3", "6$12", "6$13"}
+CATEGORIES[L["Tailoring"]] = {"2$1", "2$2", "3$1", "6$1", "6$2", "6$12", "6$13"}
+CATEGORIES[L["Engineering"]] = {"1$4", "2$1", "2$1", "6$9", "6$10"}
 CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$10", "6$13"}
 CATEGORIES[L["Complete AH Scan"]] = {"0"} -- scans the entire AH
 
@@ -126,25 +126,18 @@ function Scan:RunScan()
 	for name, selected in pairs(TSM.db.profile.scanSelections) do
 		-- if we are doing a complete AH scan then no need to figure out what else we want to scan
 		if selected and name == L["Complete AH Scan"] then
-			scanQueue = {{id=1, class=0, subClass=0, invSlot=0}}
+			scanQueue = {{id=1, class=0, subClass=0}}
 			break
 		end
 		if selected and CATEGORIES[name] then
 			for i=1, #(CATEGORIES[name]) do
-				local class, subClass, invSlot = strsplit("$", CATEGORIES[name][i])
+				local class, subClass = strsplit("$", CATEGORIES[name][i])
 				local valid = false
 				
 				if subClass then
-					if invSlot then
-						if not (alreadyAdded[class] or alreadyAdded[class.."$"..subClass] or alreadyAdded[class.."$"..subClass.."$"..invSlot]) then
-							valid = true
-							alreadyAdded[class.."$"..subClass.."$"..invSlot] = true
-						end
-					else
-						if not (alreadyAdded[class] or alreadyAdded[class.."$"..subClass]) then
-							valid = true
-							alreadyAdded[class.."$"..subClass] = true
-						end
+					if not (alreadyAdded[class] or alreadyAdded[class.."$"..subClass]) then
+						valid = true
+						alreadyAdded[class.."$"..subClass] = true
 					end
 				else
 					if not alreadyAdded[class] then
@@ -154,7 +147,7 @@ function Scan:RunScan()
 				end
 				
 				if valid then
-					tinsert(scanQueue, {id=#scanQueue, class=class, subClass=(subClass or 0), invSlot=(invSlot or 0)})
+					tinsert(scanQueue, {id=#scanQueue, class=class, subClass=(subClass or 0)})
 				end
 			end
 		end
@@ -170,7 +163,7 @@ function Scan:RunScan()
 	end
 	
 	-- sets up the non-function-local variables
-	-- filter = current category being scanned for {class, subClass, invSlot}
+	-- filter = current category being scanned for {class, subClass}
 	-- filterList = queue of categories to scan for
 	wipe(Scan.AucData)
 	status.page = 0
@@ -179,10 +172,10 @@ function Scan:RunScan()
 	status.filterList = scanQueue
 	status.class = scanQueue[1].class
 	status.subClass = scanQueue[1].subClass
-	status.invSlot = scanQueue[1].invSlot
 	status.id = scanQueue[1].id
 	status.isScanning = "Category"
 	status.numItems = #(scanQueue)
+	status.originalQueue = CopyTable(scanQueue)
 	TSMAPI:LockSidebar()
 	TSMAPI:ShowSidebarStatusBar()
 	TSMAPI:SetSidebarStatusBarText(L["AuctionDB - Scanning"])
@@ -207,7 +200,7 @@ function Scan:SendQuery(forceQueue)
 		frame:Hide()
 		
 		-- Query the auction house (then waits for AUCTION_ITEM_LIST_UPDATE to fire)
-		LAS:QueryAuctionItems("", nil, nil, status.invSlot, status.class, status.subClass, status.page, 0, 0)
+		LAS:QueryAuctionItems("", nil, nil, 0, status.class, status.subClass, status.page, 0, 0)
 	else
 		-- run delay timer then try again to scan
 		frame:Show()
@@ -255,7 +248,6 @@ function Scan:ScanAuctions()
 	if status.filterList[1] then
 		status.class = status.filterList[1].class
 		status.subClass = status.filterList[1].subClass
-		status.invSlot = status.filterList[1].invSlot
 		status.id = status.filterList[1].id
 		TSMAPI:UpdateSidebarStatusBar(floor((1-#(status.filterList)/status.numItems)*100 + 0.5)*.95)
 		status.page = 0
@@ -304,7 +296,7 @@ function Scan:StopScanning(interupted)
 	else
 		-- fires if the scan completed sucessfully
 		TSM:Print(L["Scan complete!"])
-		TSM:ProcessData(Scan.AucData)
+		TSM:ProcessData(Scan.AucData, status.originalQueue)
 	end
 	
 	Scan:Unlock()
@@ -313,6 +305,7 @@ function Scan:StopScanning(interupted)
 	
 	status.isScanning = nil
 	status.queued = nil
+	status.originalQueue = nil
 	
 	frame:Hide()
 	frame2:Hide()
