@@ -172,7 +172,6 @@ function TSM:ProcessData(scanData, queue, isTest)
 			-- wipe all the minBuyout data of items that should have been scanned
 			for itemID, data in pairs(TSM.data) do
 				local className, subClassName = select(6, GetItemInfo(itemID))
-				--if className and not classLookup[className] then print(className, itemID) end
 				if not className or scannedInfo[(classLookup[className] or "0").."@"..(subClassLookup[subClassName] or "0")] then
 					data.minBuyout = nil
 				end
