@@ -12,46 +12,6 @@ function GUI:OnEnable()
 		L["AuctionDB - Run Scan"], function(...) GUI:LoadSidebar(...) end, GUI.HideSidebar)
 end
 
--- options page
-function GUI:LoadGUI(parent)
-	local container = AceGUI:Create("SimpleGroup")
-	container:SetLayout("list")
-	parent:AddChild(container)
-	
-	local spacer = AceGUI:Create("Label")
-	spacer:SetFullWidth(true)
-	spacer:SetText(" ")
-	container:AddChild(spacer)
-	
-	local checkBox = AceGUI:Create("CheckBox")
-	checkBox:SetFullWidth(true)
-	checkBox:SetLabel(L["Enable display of AuctionDB data in tooltip."])
-	checkBox:SetValue(TSM.db.profile.tooltip)
-	checkBox:SetCallback("OnValueChanged", function(_,_,value)
-			TSM.db.profile.tooltip = value
-			if value then
-				TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
-			else
-				TSMAPI:UnregisterTooltip("TradeSkillMaster_AuctionDB")
-			end
-		end)
-	container:AddChild(checkBox)
-	
-	local spacer = AceGUI:Create("Label")
-	spacer:SetFullWidth(true)
-	spacer:SetText(" ")
-	container:AddChild(spacer)
-	
-	local checkBox = AceGUI:Create("CheckBox")
-	checkBox:SetFullWidth(true)
-	checkBox:SetLabel(L["Block Auctioneer while Scanning."])
-	checkBox:SetValue(TSM.db.profile.blockAuc)
-	checkBox:SetCallback("OnValueChanged", function(_,_,value)
-			TSM.db.profile.blockAuc = value
-		end)
-	container:AddChild(checkBox)
-end
-
 -- sidebar stuff
 local function CreateLabel(frame, text, fontObject, fontSizeAdjustment, fontStyle, p1, p2, justifyH, justifyV)
 	local label = frame:CreateFontString(nil, "OVERLAY", fontObject)
@@ -236,7 +196,7 @@ function GUI:LoadSidebar(frame)
 		AddHorizontalBar(container, -50)
 		
 		-- "Run <Regular/GetAll>s Scan" button + another horizontal bar
-		local button = CreateButton(L["Run Scan"], container, "TSMAuctionDBRunScanButton", "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
+		local button = CreateButton(L["Run Scan"], container, nil, "UIPanelButtonTemplate", 150, 30, {"TOP", 0, -70},
 			L["Starts scanning the auction house based on the below settings.\n\nIf you are running a GetAll scan, your game client may temporarily lock up."])
 		button:SetScript("OnClick", TSM.Scan.RunScan)
 		container.startScanButton = button
@@ -282,6 +242,14 @@ function GUI:LoadSidebar(frame)
 			cb:SetCallback("OnValueChanged", function(_,_,value) TSM.db.profile.scanSelections[name] = value end)
 			container[strlower(name).."CheckBox"] = cb
 		end
+		
+		local button = CreateButton(L["Search Scan Data"], container, nil, "UIPanelButtonTemplate", nil, 25, {"BOTTOMLEFT", 10, 10}, {"BOTTOMRIGHT", -10, 10},
+			L["Opens the main TSM window to the AuctionDB page where you can search through AuctionDB's scan data to quickly lookup items in the AuctionDB database."])
+		button:SetScript("OnClick", function()
+				TSMAPI:OpenFrame()
+				TSMAPI:SelectIcon("TradeSkillMaster_AuctionDB", "AuctionDB")
+			end)
+		container.openSearchPage = button
 		
 		GUI.frame = container
 	end

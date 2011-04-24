@@ -6,6 +6,8 @@ local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
 TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB","X-Curse-Packaged-Version") or GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Version") -- current version of the addon
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
+local SECONDS_PER_DAY = 60*60*24
+
 local savedDBDefaults = {
 	factionrealm = {
 		playerAuctions = {},
@@ -17,6 +19,10 @@ local savedDBDefaults = {
 		getAll = false,
 		tooltip = true,
 		blockAuc = false,
+		resultsPerPage = 50,
+		resultsSortOrder = "ascending",
+		resultsSortMethod = "name",
+		hidePoorQualityItems = true,
 	},
 }
 
@@ -26,6 +32,7 @@ function TSM:OnInitialize()
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 	TSM.Scan = TSM.modules.Scan
 	TSM.GUI = TSM.modules.GUI
+	TSM.Config = TSM.modules.Config
 	
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
 	TSM.playerAuctions = TSM.db.factionrealm.playerAuctions
@@ -34,8 +41,8 @@ function TSM:OnInitialize()
 	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
-	TSMAPI:RegisterIcon(L["AuctionDB"], "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM.GUI:LoadGUI(...) end, "TradeSkillMaster_AuctionDB")
-	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["resets the data"], true)
+	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM.Config:Load(...) end, "TradeSkillMaster_AuctionDB")
+	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["Resets AuctionDB's scan data"], true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSMAPI:RegisterData("playerauctions", TSM.GetPlayerAuctions)
 	TSMAPI:RegisterData("auctionplayers", TSM.GetPlayers)
@@ -74,7 +81,8 @@ function TSM:OnDisable()
 	TSM.db.factionrealm.time = GetTime() - sTime
 end
 
-local function FormatMoneyText(c)
+function TSM:FormatMoneyText(c)
+	if not c then return end
 	local GOLD_TEXT = "\124cFFFFD700g\124r"
 	local SILVER_TEXT = "\124cFFC7C7CFs\124r"
 	local COPPER_TEXT = "\124cFFEDA55Fc\124r"
@@ -85,7 +93,7 @@ local function FormatMoneyText(c)
 	if g > 0 then
 		moneyString = format("%s%s", "|cffffffff"..g.."|r", GOLD_TEXT)
 	end
-	if s > 0 and (g < 100) then
+	if s > 0 and (g < 1000) then
 		moneyString = format("%s%s%s", moneyString, "|cffffffff"..s.."|r", SILVER_TEXT)
 	end
 	if c > 0 and (g < 100) then
@@ -97,27 +105,56 @@ end
 
 function TSM:LoadTooltip(itemID, quantity)
 	local marketValue, _, lastScan, totalSeen, minBuyout = TSM:GetData(itemID)
-	if not (marketValue and minBuyout and totalSeen) then return end
 	
+	local text = {}
 	local marketValueText, minBuyoutText
-	if quantity and quantity > 1 then
-		marketValueText = FormatMoneyText(marketValue).." ("..FormatMoneyText(marketValue*quantity)..")"
-		minBuyoutText = FormatMoneyText(minBuyout).." ("..FormatMoneyText(minBuyout*quantity)..")"
-	else
-		marketValueText = FormatMoneyText(marketValue)
-		minBuyoutText = FormatMoneyText(minBuyout)
+	if marketValue then
+		if quantity and quantity > 1 then
+			tinsert(text, L["AuctionDB Market Value:"].." |cffffffff"..TSM:FormatMoneyText(marketValue).." ("..TSM:FormatMoneyText(marketValue*quantity)..")")
+		else
+			tinsert(text, L["AuctionDB Market Value:"].." |cffffffff"..TSM:FormatMoneyText(marketValue))
+		end
+	end
+	if minBuyout then
+		if quantity and quantity > 1 then
+			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSM:FormatMoneyText(minBuyout).." ("..TSM:FormatMoneyText(minBuyout*quantity)..")")
+		else
+			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSM:FormatMoneyText(minBuyout))
+		end
+	end
+	if totalSeen then
+		tinsert(text, L["AuctionDB Seen Count:"].." |cffffffff"..totalSeen)
 	end
 		
-	return {L["AuctionDB Market Value:"].." |cffffffff"..marketValueText,
-		L["AuctionDB Min Buyout:"].." |cffffffff"..minBuyoutText,
-		L["AuctionDB Seen Count:"].." |cffffffff"..totalSeen}
+	return text
 end
 
 function TSM:Reset()
-	for i in pairs(TSM.data) do
-		TSM.data[i] = nil
+	-- Popup Confirmation Window used in this module
+	StaticPopupDialogs["TSMAuctionDBClearDataConfirm"] = StaticPopupDialogs["TSMAuctionDBClearDataConfirm"] or {
+		text = L["Are you sure you want to clear your AuctionDB data?"],
+		button1 = YES,
+		button2 = CANCEL,
+		timeout = 0,
+		whileDead = true,
+		hideOnEscape = true,
+		OnAccept = function()
+			for i in pairs(TSM.data) do
+				TSM.data[i] = nil
+			end
+			TSM:Print(L["Reset Data"])
+		end,
+		OnCancel = false,
+	}
+	
+	StaticPopup_Show("TSMAuctionDBClearDataConfirm")
+	for i=1, 10 do
+		local popup = _G["StaticPopup" .. i]
+		if popup and popup.which == "TSMAuctionDBClearDataConfirm" then
+			popup:SetFrameStrata("TOOLTIP")
+			break
+		end
 	end
-	print("Reset Data")
 end
 
 function TSM:GetData(itemID)
@@ -174,12 +211,14 @@ function TSM:ProcessData(scanData, queue, isTest)
 				local className, subClassName = select(6, GetItemInfo(itemID))
 				if not className or scannedInfo[(classLookup[className] or "0").."@"..(subClassLookup[subClassName] or "0")] then
 					data.minBuyout = nil
+					data.currentQuantity = 0
 				end
 			end
 		else
 			-- wipe all the minBuyout data
 			for itemID, data in pairs(TSM.data) do
 				data.minBuyout = nil
+				data.currentQuantity = 0
 			end
 		end
 	end
@@ -205,7 +244,8 @@ function TSM:ProcessData(scanData, queue, isTest)
 			seen=((TSM.data[itemID] and TSM.data[itemID].seen or 0) + num),
 			currentQuantity=data.quantity,
 			lastScan=time(),
-			minBuyout=data.minBuyout}
+			minBuyout=data.minBuyout,
+			itemInfo={GetItemInfo(itemID)}}
 	end
 end
 
@@ -230,8 +270,6 @@ function TSM:CalculateMarketValue(records, itemID)
 	for i=1, totalNum do
 		varience = varience + (records[i]-uncorrectedMean)^2
 	end
-	
-	if uncorrectedMean == 1/0 or uncorrectedMean == 0 then print("ERROR", totalBuyout, totalNum) end
 	
 	local stdDev = sqrt(varience/totalNum)
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
@@ -321,4 +359,12 @@ end
 function TSM:GetSeenCount(itemID)
 	if not TSM.data[itemID] then return end
 	return TSM.data[itemID].seen
+end
+
+function TSM:GetTotalPlayerAuctions(itemID)
+	local total = 0
+	for player in pairs(TSM.playerAuctions) do
+		total = total + TSM:GetPlayerAuctions(itemID, player)
+	end
+	return total > 0 and total
 end

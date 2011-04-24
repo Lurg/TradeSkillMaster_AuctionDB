@@ -103,6 +103,9 @@ lib.frame:SetScript("OnEvent", function(self, event)
 		private.sendCallbacks("results")
 	elseif event == "AUCTION_HOUSE_SHOW" then
 		private.ahOpen = true
+		for obj in pairs(lib.locks) do
+			lib.locks[obj] = nil
+		end
 	elseif event == "AUCTION_HOUSE_CLOSED" then
 		private.ahOpen = false
 	end
@@ -157,7 +160,7 @@ end
 function lib:IsLocked()
 	for obj, lockStatus in pairs(lib.locks) do
 		if lockStatus then
-			return true
+			return obj
 		end
 	end
 	return false
