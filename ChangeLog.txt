@@ -1,3 +1,12 @@
+v0.3
+*Minimum buyouts will no long be wiped after a profession scan for items that weren't expected to be scanned.
+*Added a feature for searching through the scan data.
+*Completely re-did AuctionDB's page in the main TSM window to accommodate this new feature.
+*Added a button to the sidebar frame to quickly access this new feature.
+*The AuctionDB tooltip will now show whatever information is available rather than all or nothing.
+*Added a popup confirmation to the slash command for clearing the scan data (/tsm adbreset).
+*Many other minor bug fixes and improvements.
+
 v0.2.2
 *AuctionDB should no longer be blocking Auctioneer when it's not supposed to.
 *Many other minor bug fixes and improvements.
