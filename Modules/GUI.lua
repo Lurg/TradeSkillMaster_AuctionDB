@@ -243,7 +243,7 @@ function GUI:LoadSidebar(frame)
 			container[strlower(name).."CheckBox"] = cb
 		end
 		
-		local button = CreateButton(L["Search Scan Data"], container, nil, "UIPanelButtonTemplate", nil, 25, {"BOTTOMLEFT", 10, 10}, {"BOTTOMRIGHT", -10, 10},
+		local button = CreateButton(L["Search Scan Data"], container, nil, "UIPanelButtonTemplate", nil, 25, {"BOTTOMLEFT", 10, 35}, {"BOTTOMRIGHT", -10, 35},
 			L["Opens the main TSM window to the AuctionDB page where you can search through AuctionDB's scan data to quickly lookup items in the AuctionDB database."])
 		button:SetScript("OnClick", function()
 				TSMAPI:OpenFrame()
