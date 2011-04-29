@@ -44,8 +44,6 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM.Config:Load(...) end, "TradeSkillMaster_AuctionDB")
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["Resets AuctionDB's scan data"], true)
 	TSMAPI:RegisterData("market", TSM.GetData)
-	TSMAPI:RegisterData("playerauctions", TSM.GetPlayerAuctions)
-	TSMAPI:RegisterData("auctionplayers", TSM.GetPlayers)
 	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
 	
 	if TSM.db.profile.tooltip then
@@ -341,17 +339,8 @@ function TSM:ScanPlayerAuctions()
 	end
 end
 
-function TSM:GetPlayers()
-	local temp = {}
-	for name in pairs(TSM.playerAuctions) do
-		tinsert(temp, name)
-	end
-	return temp
-end
 
 function TSM:GetPlayerAuctions(itemID, player)
-	if not itemID then return "Invalid argument" end
-	player = player or UnitName("player")
 	if not TSM.playerAuctions[player] or (time() - (TSM.playerAuctions[player].time or 0)) > (48*60*60) then return 0 end -- data is old
 	return TSM.playerAuctions[player][itemID] or 0
 end
