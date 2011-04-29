@@ -1,3 +1,7 @@
+v0.3.1
+*Removed player auction count code from AuctionDB (it was moved to Gathering).
+*Updated TOC for patch 4.1.
+
 v0.3
 *Minimum buyouts will no long be wiped after a profession scan for items that weren't expected to be scanned.
 *Added a feature for searching through the scan data.
