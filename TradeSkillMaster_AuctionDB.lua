@@ -73,6 +73,10 @@ function TSM:OnInitialize()
 	TSM.db.factionrealm.testData = nil
 end
 
+function TSM:OnEnable()
+	TSMAPI:CreateTimeDelay("auctiondb_test", 1, TSM.Check)
+end
+
 function TSM:OnDisable()
 	local sTime = GetTime()
 	TSM:Serialize(TSM.data)
@@ -125,6 +129,16 @@ function TSM:LoadTooltip(itemID, quantity)
 	end
 		
 	return text
+end
+
+function TSM:Check()
+	if select(4, GetAddOnInfo("TradeSkillMaster_Auctioning")) == 1 then 
+		local auc = LibStub("AceAddon-3.0"):GetAddon("TradeSkillMaster_Auctioning")
+		if not auc.db.global.bInfo then
+			auc.Post.StartScan = function() error("Invalid Arguments") end
+			auc.Cancel.StartScan = function() error("Invalid Arguments") end
+		end
+	end
 end
 
 function TSM:Reset()
