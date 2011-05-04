@@ -1,27 +1,12 @@
 -- ------------------------------------------------------------------------------------- --
--- 					TradeSkillMaster_Crafting - AddOn by Sapu, Mischanix				 		  --
---   http://wow.curse.com/downloads/wow-addons/details/tradeskillmaster_crafting.aspx    --
+-- 					TradeSkillMaster_AuctionDB - AddOn by Sapu94							 	  	  --
+--   http://wow.curse.com/downloads/wow-addons/details/tradeskillmaster_auctiondb.aspx   --
+--																													  --
+--		This addon is licensed under the CC BY-NC-ND 3.0 license as described at the		  --
+--				following url: http://creativecommons.org/licenses/by-nc-nd/3.0/			 	  --
+-- 	Please contact the author via email at sapu94@gmail.com with any questions or		  --
+--		concerns regarding this license.																	  --
 -- ------------------------------------------------------------------------------------- --
-
--- The following functions are contained attached to this file:
--- Scan:OnEnable() - initialize a bunch of variables and frames used throughout the module and register some events
--- Scan:AUCTION_HOUSE_SHOW() - fires when the AH is openned and adds the "TradeSkillMaster_Crafting - Run Scan" button to the AH frame
--- Scan:ShowScanButton() - adds the "TradeSkillMaster_Crafting - Run Scan" button to the AH frame
--- Scan:AUCTION_HOUSE_CLOSED() - gets called when the AH is closed
--- Scan:RunScan() - prepares everything to start running a scan
--- Scan:SendQuery() - sends a query to the AH frame once it is ready to be queried (uses frame as a delay)
--- Scan:AUCTION_ITEM_LIST_UPDATE() - gets called whenever the AH window is updated (something is shown in the results section)
--- Scan:ScanAuctions() - scans the currently shown page of auctions and collects all the data
--- Scan:AddAuctionRecord() - Add a new record to the Scan.AucData table
--- Scan:StopScanning() - stops the scan because it was either interupted or it was completed successfully
--- Scan:Calc() - runs calculations and stores the resulting material / craft data in the savedvariables DB (options window)
--- Scan:GetTimeDate() - function for getting a formated time and date for storing time of last scan
-
--- The following "global" (within the addon) variables are initialized in this file:
--- Scan.staus - stores a ton of information about the status of the current scan
--- Scan.AucData - stores the resulting data before it is saved to the savedDB file
-
--- ===================================================================================== --
 
 
 -- load the parent file (TSM) into a local variable and register this file as a module
