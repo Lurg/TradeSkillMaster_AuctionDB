@@ -328,23 +328,32 @@ function Scan:StartGetAllScan()
 	local scanFrame = CreateFrame("Frame")
 	scanFrame:Hide()
 	scanFrame.num = 0
+	scanFrame.tries = 3
 	scanFrame:SetScript("OnUpdate", function(self, elapsed)
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			for i=1, 200 do
-				self.num = self.num + 1
 				local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", self.num))
 				local name, _, quantity, _, _, _, _, _, buyout = GetAuctionItemInfo("list", self.num)
-				Scan:AddAuctionRecord(itemID, quantity, buyout)
-				TSMAPI:UpdateSidebarStatusBar(100-floor(i/2), true)
-				TSMAPI:UpdateSidebarStatusBar(floor((1+(self.num-self.numShown)/self.numShown)*100 + 0.5))
-				
-				if self.num == self.numShown then
-					if self.num == 42554 then TSM:Print(L["|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result, thousands of items may have been missed. Please use regular scans until blizzard fixes this bug."]) end
-					self:Hide()
-					Scan:StopScanning()
-					break
-				elseif not AuctionFrame:IsVisible() then
-					self:Hide()
+				if self.tries == 0 or (itemID and quantity and buyout) then
+					self.num = self.num + 1
+					self.tries = 3
+					if itemID then
+						Scan:AddAuctionRecord(itemID, quantity, buyout)
+					end
+					TSMAPI:UpdateSidebarStatusBar(100-floor(i/2), true)
+					TSMAPI:UpdateSidebarStatusBar(floor((1+(self.num-self.numShown)/self.numShown)*100 + 0.5))
+					
+					if self.num == self.numShown then
+						if self.num == 42554 then TSM:Print(L["|cffff0000WARNING:|r As of 4.0.1 there is a bug with GetAll scans only scanning a maximum of 42554 auctions from the AH which is less than your auction house currently contains. As a result, thousands of items may have been missed. Please use regular scans until blizzard fixes this bug."]) end
+						self:Hide()
+						Scan:StopScanning()
+						break
+					elseif not AuctionFrame:IsVisible() then
+						self:Hide()
+						break
+					end
+				else
+					self.tries = self.tries - 1
 					break
 				end
 			end
