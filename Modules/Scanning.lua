@@ -32,7 +32,7 @@ CATEGORIES[L["Engineering"]] = {"1$4", "2$1", "2$1", "6$9", "6$10"}
 CATEGORIES[L["Cooking"]] = {"4$1", "6$5", "6$10", "6$13"}
 CATEGORIES[L["Complete AH Scan"]] = {"0"} -- scans the entire AH
 
-local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}}
+local status = {page=0, retries=0, timeDelay=0, AH=false, filterlist = {}, aucAdv=nil}
 
 -- initialize a bunch of variables and frames used throughout the module and register some events
 function Scan:OnEnable()
@@ -105,6 +105,14 @@ function Scan:RunScan()
 		TSMAPI:UpdateSidebarStatusBar(0, true)
 		Scan:StartGetAllScan()
 		return
+	end
+	
+	if AucSearchUI and TSM.db.profile.blockAuc then
+		local get, set = AucSearchUI.GetSearchLocals()
+		if get and set then
+			status.aucAdv = get("realtime.always")
+			set("realtime.always", false)
+		end
 	end
 	
 	-- builds the scanQueue
@@ -294,6 +302,13 @@ function Scan:StopScanning(interupted)
 	
 	frame:Hide()
 	frame2:Hide()
+	
+	if AucSearchUI and TSM.db.profile.blockAuc and status.aucAdv ~= nil then
+		local _, set = AucSearchUI and AucSearchUI.GetSearchLocals()
+		if set then
+			set("realtime.always", status.aucAdv)
+		end
+	end
 end
 
 function Scan:IsScanning()
