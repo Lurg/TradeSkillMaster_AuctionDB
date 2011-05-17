@@ -135,7 +135,7 @@ function Config:LoadSearch(container)
 					labelInfo = {{text=data.currentQuantity..(playerQuantity and " |cffffbb00("..playerQuantity..")|r" or ""), relativeWidth=0.18},
 						{text=TSM:FormatMoneyText(data.minBuyout) or "---", relativeWidth=0.20},
 						{text=TSM:FormatMoneyText(data.marketValue) or "---", relativeWidth=0.24},
-						{text=timeDiff and "|cff99ffff"..format(L["%s ago"], timeDiff).."|r" or "|cff99ffff---|r", relativeWidth=0.33}},
+						{text=(timeDiff and "|cff99ffff"..format(L["%s ago"], timeDiff).."|r" or "|cff99ffff---|r"), relativeWidth=0.33}},
 					relativeWidth = 0.65,
 				},
 				{
