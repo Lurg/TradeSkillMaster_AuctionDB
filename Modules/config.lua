@@ -15,9 +15,11 @@ local Config = TSM:NewModule("Config")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
-local page = 0
+local searchPage = 0
 local filter = {text=nil, class=nil, subClass=nil}
 local items = {}
+local searchST
+local ROW_HEIGHT = 16
 
 -- options page
 function Config:Load(parent)
@@ -110,77 +112,45 @@ end
 
 function Config:LoadSearch(container)
 	local results = {}
-	
 	local totalResults = #items
-	local minIndex = page * TSM.db.profile.resultsPerPage + 1
-	local maxIndex = min(TSM.db.profile.resultsPerPage*(page+1), totalResults)
-	if totalResults > 0 then
-		for i=minIndex, maxIndex do
-			local itemID = items[i]
-			local data = TSM.data[items[i]]
-			local playerQuantity = TSM:GetTotalPlayerAuctions(itemID)
-			local timeDiff = data.lastScan and SecondsToTime(time()-data.lastScan)
-		
-			local temp = {
+	local minIndex = searchPage * TSM.db.profile.resultsPerPage + 1
+	local maxIndex = min(TSM.db.profile.resultsPerPage*(searchPage+1), totalResults)
+	if totalResults == 0 then
+		if filter.text then
+			results = {
 				{
-					type = "InteractiveLabel",
-					text = select(2, GetItemInfo(itemID)) or "???",
-					fontObject = GameFontHighlight,
-					relativeWidth = 0.349,
-					callback = function() SetItemRef("item:".. itemID, itemID) end,
-					tooltip = itemID,
+					type = "Spacer",
+					quantity = 2,
 				},
 				{
-					type = "MultiLabel",
-					labelInfo = {{text=data.currentQuantity..(playerQuantity and " |cffffbb00("..playerQuantity..")|r" or ""), relativeWidth=0.18},
-						{text=TSM:FormatMoneyText(data.minBuyout) or "---", relativeWidth=0.20},
-						{text=TSM:FormatMoneyText(data.marketValue) or "---", relativeWidth=0.24},
-						{text=(timeDiff and "|cff99ffff"..format(L["%s ago"], timeDiff).."|r" or "|cff99ffff---|r"), relativeWidth=0.33}},
-					relativeWidth = 0.65,
+					type = "Label",
+					relativeWidth = 0.4
 				},
 				{
-					type = "HeadingLine",
+					type = "Label",
+					relativeWidth = 0.6,
+					text = L["No items found"],
+					fontObject = GameFontNormalLarge,
 				},
 			}
-			
-			for _, widget in ipairs(temp) do
-				tinsert(results, widget)
-			end
+		else
+			results = {
+				{
+					type = "Spacer",
+					quantity = 2,
+				},
+				{
+					type = "Label",
+					relativeWidth = 0.05
+				},
+				{
+					type = "Label",
+					relativeWidth = 0.949,
+					text = L["Use the search box and category filters above to search the AuctionDB data."],
+					fontObject = GameFontNormalLarge,
+				},
+			}
 		end
-	elseif filter.text then
-		results = {
-			{
-				type = "Spacer",
-				quantity = 2,
-			},
-			{
-				type = "Label",
-				relativeWidth = 0.4
-			},
-			{
-				type = "Label",
-				relativeWidth = 0.6,
-				text = L["No items found"],
-				fontObject = GameFontNormalLarge,
-			},
-		}
-	else
-		results = {
-			{
-				type = "Spacer",
-				quantity = 2,
-			},
-			{
-				type = "Label",
-				relativeWidth = 0.05
-			},
-			{
-				type = "Label",
-				relativeWidth = 0.949,
-				text = L["Use the search box and category filters above to search the AuctionDB data."],
-				fontObject = GameFontNormalLarge,
-			},
-		}
 	end
 	
 	local classes, subClasses = {}, {}
@@ -215,7 +185,7 @@ function Config:LoadSearch(container)
 					relativeWidth = 0.49,
 					callback = function(_,_,value)
 							filter.text = (value or ""):trim()
-							page = 0
+							searchPage = 0
 							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
@@ -237,7 +207,7 @@ function Config:LoadSearch(container)
 							else
 								filter.class = value
 							end
-							page = 0
+							searchPage = 0
 							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
@@ -256,7 +226,7 @@ function Config:LoadSearch(container)
 							else
 								filter.subClass = value
 							end
-							page = 0
+							searchPage = 0
 							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
@@ -271,7 +241,7 @@ function Config:LoadSearch(container)
 					text = L["Refresh"],
 					relativeWidth = 0.2,
 					callback = function()
-							page = 0
+							searchPage = 0
 							Config:UpdateItems()
 							container:SelectTab(1)
 							container:DoLayout()
@@ -290,7 +260,7 @@ function Config:LoadSearch(container)
 					imageHeight = 24,
 					disabled = minIndex == 1,
 					callback = function(self)
-							page = page - 1
+							searchPage = searchPage - 1
 							container:SelectTab(1)
 						end,
 					tooltip = L["Previous Page"],
@@ -312,7 +282,7 @@ function Config:LoadSearch(container)
 					imageHeight = 24,
 					disabled = maxIndex == totalResults,
 					callback = function(self)
-							page = page + 1
+							searchPage = searchPage + 1
 							container:SelectTab(1)
 						end,
 					tooltip = L["Next Page"],
@@ -321,17 +291,7 @@ function Config:LoadSearch(container)
 					type = "HeadingLine"
 				},
 				{
-					type = "MultiLabel",
-					labelInfo = {{text=L["Item Link"], relativeWidth=0.33}, {text=L["Seen Last Scan (Yours)"], relativeWidth=0.12},
-						{relativeWidth=0.03}, {text=L["Minimum Buyout"], relativeWidth=0.15}, {text=L["Market Value"], relativeWidth=0.15},
-						{text=L["Last Scanned"], relativeWidth=0.21}},
-					relativeWidth = 1,
-				},
-				{
-					type = "HeadingLine",
-				},
-				{
-					type = "ScrollFrame",
+					type = "SimpleGroup",
 					fullHeight = true,
 					layout = "Flow",
 					children = results,
@@ -341,6 +301,131 @@ function Config:LoadSearch(container)
 	}
 	
 	TSMAPI:BuildPage(container, page)
+	
+	local stParent = container.children[1].children[#container.children[1].children].frame
+	local colInfo = Config:GetSTColInfo(container.frame:GetWidth())
+
+	if not searchST then
+		searchST = TSMAPI:CreateScrollingTable(colInfo)
+	end
+	searchST.frame:SetParent(stParent)
+	searchST.frame:SetPoint("BOTTOMLEFT", stParent, 2, 2)
+	searchST.frame:SetPoint("TOPRIGHT", stParent, -2, -8)
+	searchST.frame:SetScript("OnSizeChanged", function(_,width, height)
+			searchST:SetDisplayCols(Config:GetSTColInfo(width))
+			searchST:SetDisplayRows(floor(height/ROW_HEIGHT), ROW_HEIGHT)
+		end)
+	searchST:Show()
+	searchST:SetData(Config:GetSearchData())
+	searchST.frame:GetScript("OnSizeChanged")(searchST.frame, searchST.frame:GetWidth(), searchST.frame:GetHeight())
+	
+	local font, size = GameFontNormal:GetFont()
+	for i, row in ipairs(searchST.rows) do
+		for j, col in ipairs(row.cols) do
+			col.text:SetFont(font, size-1)
+		end
+	end
+	
+	searchST:RegisterEvents({
+		["OnEnter"] = function(_, self, data, _, _, rowNum)
+			if not rowNum then return end
+			
+			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+			GameTooltip:SetHyperlink("item:"..data[rowNum].itemID)
+			GameTooltip:Show()
+		end,
+		["OnLeave"] = function()
+			GameTooltip:ClearLines()
+			GameTooltip:Hide()
+		end})
+end
+
+local stCols = {
+	{
+		name = L["Item Link"],
+		width = 0.38,
+		defaultsort = "asc",
+		comparesort = ColSortMethod,
+	},
+	{
+		name = L["Num(Yours)"],
+		width = 0.1,
+		defaultsort = "dsc",
+		comparesort = ColSortMethod,
+	},
+	{
+		name = L["Minimum Buyout"],
+		width = 0.15,
+		defaultsort = "dsc",
+		comparesort = ColSortMethod,
+	},
+	{
+		name = L["Market Value"],
+		width = 0.15,
+		defaultsort = "dsc",
+		comparesort = ColSortMethod,
+	},
+	{
+		name = L["Last Scanned"],
+		width = 0.21,
+		defaultsort = "dsc",
+		comparesort = ColSortMethod,
+	},
+}
+
+function Config:GetSTColInfo(width)
+	local colInfo = CopyTable(stCols)
+	
+	for i=1, #colInfo do
+		colInfo[i].width = floor(colInfo[i].width*width)
+	end
+	
+	return colInfo
+end
+
+function Config:GetSearchData()
+	Config:UpdateItems()
+	local stData = {}
+	
+	local totalResults = #items
+	local minIndex = searchPage * TSM.db.profile.resultsPerPage + 1
+	local maxIndex = min(TSM.db.profile.resultsPerPage*(searchPage+1), totalResults)
+	if totalResults > 0 then
+		for i=minIndex, maxIndex do
+			local itemID = items[i]
+			local data = TSM.data[items[i]]
+			local playerQuantity = TSM:GetTotalPlayerAuctions(itemID)
+			local timeDiff = data.lastScan and SecondsToTime(time()-data.lastScan)
+			local name, link = GetItemInfo(itemID)
+			tinsert(stData, {
+					cols = {
+						{
+							value = link or "???",
+							args = {name},
+						},
+						{
+							value = data.currentQuantity..(playerQuantity and " |cffffbb00("..playerQuantity..")|r" or ""),
+							args = {data.currentQuantity},
+						},
+						{
+							value = TSM:FormatMoneyText(data.minBuyout) or "---",
+							args = {data.minBuyout or 0},
+						},
+						{
+							value = TSM:FormatMoneyText(data.marketValue) or "---",
+							args = {data.marketValue or 0},
+						},
+						{
+							value = (timeDiff and "|cff99ffff"..format(L["%s ago"], timeDiff).."|r" or "|cff99ffff---|r"),
+							args = {timeDiff or 0},
+						},
+					},
+					itemID = itemID,
+				})
+		end
+	end
+	
+	return stData
 end
 
 function Config:LoadOptions(container)
