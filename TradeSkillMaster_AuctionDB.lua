@@ -61,6 +61,11 @@ function TSM:OnInitialize()
 		TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
 	end
 	
+	if TSMAPI.AddPriceSource then
+		TSMAPI:AddPriceSource("DBMarket", function(itemLink) return TSM:GetData(itemLink) end)
+		TSMAPI:AddPriceSource("DBMinBuyout", function(itemLink) return select(5, TSM:GetData(itemLink)) end)
+	end
+	
 	local toRemove = {}
 	for index, data in pairs(TSM.playerAuctions) do
 		if type(index) ~= "string" or index == "time" then
@@ -187,6 +192,9 @@ function TSM:Reset()
 end
 
 function TSM:GetData(itemID)
+	if itemID and not tonumber(itemID) then
+		itemID = TSMAPI:GetItemID(itemID) 
+	end
 	if not itemID then return end
 	itemID = TSMAPI:GetNewGem(itemID) or itemID
 	if not TSM.data[itemID] then return end
