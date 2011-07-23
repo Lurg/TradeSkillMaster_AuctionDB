@@ -101,16 +101,15 @@ function Config:UpdateItems()
 		end
 	end
 	
-	sort(items, function(a, b)
-			if TSM.db.profile.resultsSortOrder == "ascending" then
-				return (cache[a] or 1/0) < (cache[b] or 1/0)
-			else -- descending
-				return (cache[a] or 0) > (cache[b] or 0)
-			end
-		end)
+	if TSM.db.profile.resultsSortOrder == "ascending" then
+		sort(items, function(a, b) return (cache[a] or 1/0) < (cache[b] or 1/0) end)
+	else
+		sort(items, function(a, b) return (cache[a] or 0) > (cache[b] or 0) end)
+	end
 end
 
 function Config:LoadSearch(container)
+	local searchDataTmp = Config:GetSearchData()
 	local results = {}
 	local totalResults = #items
 	local minIndex = searchPage * TSM.db.profile.resultsPerPage + 1
@@ -186,7 +185,6 @@ function Config:LoadSearch(container)
 					callback = function(_,_,value)
 							filter.text = (value or ""):trim()
 							searchPage = 0
-							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
 					tooltip = L["Any items in the AuctionDB database that contain the search phrase in their names will be displayed."],
@@ -208,7 +206,6 @@ function Config:LoadSearch(container)
 								filter.class = value
 							end
 							searchPage = 0
-							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
 					tooltip = L["You can filter the results by item type by using this dropdown. For example, if you want to search for all herbs, you would select \"Trade Goods\" in this dropdown and \"Herbs\" as the subtype filter."],
@@ -227,7 +224,6 @@ function Config:LoadSearch(container)
 								filter.subClass = value
 							end
 							searchPage = 0
-							Config:UpdateItems()
 							container:SelectTab(1)
 						end,
 					tooltip = L["You can filter the results by item subtype by using this dropdown. For example, if you want to search for all herbs, you would select \"Trade Goods\" in the item type dropdown and \"Herbs\" in this dropdown."],
@@ -316,7 +312,7 @@ function Config:LoadSearch(container)
 			searchST:SetDisplayRows(floor(height/ROW_HEIGHT), ROW_HEIGHT)
 		end)
 	searchST:Show()
-	searchST:SetData(Config:GetSearchData())
+	searchST:SetData(searchDataTmp)
 	searchST.frame:GetScript("OnSizeChanged")(searchST.frame, searchST.frame:GetWidth(), searchST.frame:GetHeight())
 	
 	local font, size = GameFontNormal:GetFont()
