@@ -11,7 +11,7 @@
 
 -- load the parent file (TSM) into a local variable and register this file as a module
 local TSM = select(2, ...)
-local Config = TSM:NewModule("Config")
+local Config = TSM:NewModule("Config", "AceHook-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
@@ -304,6 +304,8 @@ function Config:LoadSearch(container)
 	if not searchST then
 		searchST = TSMAPI:CreateScrollingTable(colInfo)
 	end
+	Config:UnhookAll()
+	Config:HookScript(stParent, "OnHide", function() Config:UnhookAll() searchST:Hide() end)
 	searchST.frame:SetParent(stParent)
 	searchST.frame:SetPoint("BOTTOMLEFT", stParent, 2, 2)
 	searchST.frame:SetPoint("TOPRIGHT", stParent, -2, -8)
