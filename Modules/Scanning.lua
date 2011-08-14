@@ -311,6 +311,17 @@ function Scan:StopScanning(interupted)
 	end
 end
 
+function Scan:ProcessImportedData(auctionData)
+	Scan.AucData = {}
+	for itemID, auctions in pairs(auctionData) do
+		for _, auction in ipairs(auctions) do
+			local buyout, quantity = unpack(auction)
+			Scan:AddAuctionRecord(itemID, quantity, buyout*quantity)
+		end
+	end
+	TSM:ProcessData(Scan.AucData)
+end
+
 function Scan:IsScanning()
 	return status.isScanning
 end

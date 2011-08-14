@@ -17,6 +17,7 @@ Locale\zhCN.lua
 Locale\zhTW.lua
 
 TradeSkillMaster_AuctionDB.lua
+AuctionData.lua
 Modules\AuctionScanning.lua
 Modules\Scanning.lua
 Modules\GUI.lua

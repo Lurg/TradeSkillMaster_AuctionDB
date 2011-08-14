@@ -24,6 +24,7 @@ local savedDBDefaults = {
 		playerAuctions = {},
 		scanData = "",
 		time = 0,
+		lastAutoUpdate = 0;
 	},
 	profile = {
 		scanSelections = {},
@@ -91,6 +92,7 @@ end
 
 function TSM:OnEnable()
 	TSMAPI:CreateTimeDelay("auctiondb_test", 1, TSM.Check)
+	if TSM.CheckNewAuctionData then TSM:CheckNewAuctionData() end
 end
 
 function TSM:OnDisable()
@@ -395,4 +397,8 @@ function TSM:GetTotalPlayerAuctions(itemID)
 		total = total + TSM:GetPlayerAuctions(itemID, player)
 	end
 	return total > 0 and total
+end
+
+function TSM:CheckNewAuctionData()
+	
 end
