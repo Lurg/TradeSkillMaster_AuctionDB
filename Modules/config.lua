@@ -392,7 +392,7 @@ function Config:GetSearchData()
 		for i=minIndex, maxIndex do
 			local itemID = items[i]
 			local data = TSM.data[items[i]]
-			local playerQuantity = TSM:GetTotalPlayerAuctions(itemID)
+			local playerQuantity = TSMAPI:GetData("totalplayerauctions", itemID)
 			local timeDiff = data.lastScan and SecondsToTime(time()-data.lastScan)
 			local name, link = GetItemInfo(itemID)
 			tinsert(stData, {

@@ -21,7 +21,6 @@ local SECONDS_PER_DAY = 60*60*24
 
 local savedDBDefaults = {
 	factionrealm = {
-		playerAuctions = {},
 		scanData = "",
 		time = 0,
 		lastAutoUpdate = 0;
@@ -47,10 +46,9 @@ function TSM:OnInitialize()
 	TSM.Config = TSM.modules.Config
 	
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
-	TSM.playerAuctions = TSM.db.factionrealm.playerAuctions
+	TSM.db.factionrealm.playerAuctions = nil
 	
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
-	TSM:RegisterEvent("AUCTION_OWNED_LIST_UPDATE", "ScanPlayerAuctions")
 
 	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM.Config:Load(...) end, "TradeSkillMaster_AuctionDB")
@@ -65,25 +63,6 @@ function TSM:OnInitialize()
 	if TSMAPI.AddPriceSource then
 		TSMAPI:AddPriceSource("DBMarket", function(itemLink) return TSM:GetData(itemLink) end)
 		TSMAPI:AddPriceSource("DBMinBuyout", function(itemLink) return select(5, TSM:GetData(itemLink)) end)
-	end
-	
-	local toRemove = {}
-	for index, data in pairs(TSM.playerAuctions) do
-		if type(index) ~= "string" or index == "time" then
-			tinsert(toRemove, index)
-		elseif type(data) == "table" then
-			local toRemove2 = {}
-			for i, v in pairs(data) do
-				if v == 0 then tinsert(toRemove2, i) end
-			end
-			for _, i in ipairs(toRemove2) do
-				data[i] = nil
-			end
-		end
-	end
-	
-	for _, index in ipairs(toRemove) do
-		TSM.playerAuctions[index] = nil
 	end
 	
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
@@ -337,11 +316,38 @@ function TSM:GetWeight(dTime, i)
 	return (i-i^(dTime/(dTime + k)))/i
 end
 
+local alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
+local base = #alpha
+local function decode(h)
+	if strfind(h, "~") then return end
+	local result = 0
+	
+	local i = #h - 1
+	for w in string.gmatch(h, "([A-Za-z0-9_=])") do
+		result = result + (strfind(alpha, w)-1)*(base^i)
+		i = i - 1
+	end
+	
+	return result
+end
+
+local function encode(d)
+	if not tonumber(d) then return "~" end
+	local r = d % base
+	local result
+	if d-r == 0 then
+		result = strsub(alpha, r+1, r+1)
+	else 
+		result = encode((d-r)/base) .. strsub(alpha, r+1, r+1)
+	end
+	return result
+end
+
 function TSM:Serialize()
 	local results = {}
 	for id, v in pairs(TSM.data) do
 		if v.marketValue then
-			tinsert(results, "q" .. id .. "," .. v.seen .. "," .. v.marketValue .. "," .. v.lastScan .. "," .. (v.currentQuantity or 0) .. "," .. (v.minBuyout or "n"))
+			tinsert(results, "!"..encode(id)..","..encode(v.seen)..","..encode(v.marketValue)..","..encode(v.lastScan)..","..encode(v.currentQuantity or 0)..","..encode(v.minBuyout))
 		end
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
@@ -354,51 +360,27 @@ local function OldDeserialize(data)
 	end
 end
 
-function TSM:Deserialize(data)
-	if strsub(data, 1, 1) == "d" then
-		return OldDeserialize(data)
-	end
-	
+local function OldDeserialize2(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,c,d,f in string.gmatch(data, "q([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^q]+)") do
 		TSM.data[tonumber(k)] = {seen=tonumber(a),marketValue=tonumber(b),lastScan=tonumber(c),currentQuantity=tonumber(d),minBuyout=tonumber(f)}
 	end
 end
 
-function TSM:ScanPlayerAuctions()
-	local currentPlayer = UnitName("player")
-	TSM.playerAuctions[currentPlayer] = TSM.playerAuctions[currentPlayer] or {}
-	wipe(TSM.playerAuctions[currentPlayer])
-	TSM.playerAuctions[currentPlayer].time = time()
-	
-	for i=1, GetNumAuctionItems("owner") do
-		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("owner", i))
-		local _, _, quantity, _, _, _, _, _, _, _, _, _, wasSold = GetAuctionItemInfo("owner", i)
-		if wasSold == 0 and itemID then
-			TSM.playerAuctions[currentPlayer][itemID] = (TSM.playerAuctions[currentPlayer][itemID] or 0) + quantity
-		end
+function TSM:Deserialize(data)
+	if strsub(data, 1, 1) == "d" then
+		return OldDeserialize(data)
+	elseif strsub(data, 1, 1) == "q" then
+		return OldDeserialize2(data)
 	end
-end
-
-
-function TSM:GetPlayerAuctions(itemID, player)
-	if not TSM.playerAuctions[player] or (time() - (TSM.playerAuctions[player].time or 0)) > (48*60*60) then return 0 end -- data is old
-	return TSM.playerAuctions[player][itemID] or 0
+	
+	TSM.data = TSM.data or {}
+	for k,a,b,c,d,f in string.gmatch(data, "!([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^!]+)") do
+		TSM.data[decode(k)] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f)}
+	end
 end
 
 function TSM:GetSeenCount(itemID)
 	if not TSM.data[itemID] then return end
 	return TSM.data[itemID].seen
-end
-
-function TSM:GetTotalPlayerAuctions(itemID)
-	local total = 0
-	for player in pairs(TSM.playerAuctions) do
-		total = total + TSM:GetPlayerAuctions(itemID, player)
-	end
-	return total > 0 and total
-end
-
-function TSM:CheckNewAuctionData()
-	
 end
