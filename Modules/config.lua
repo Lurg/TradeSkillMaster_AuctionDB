@@ -81,9 +81,6 @@ function Config:UpdateItems()
 	if filter.text or fClass then
 		for itemID, data in pairs(TSM.data) do
 			local name, _, rarity, ilvl, minlvl, class, subClass = GetItemInfo(itemID)
-			if not name then
-				name, _, rarity, ilvl, minlvl, class, subClass = unpack(data.itemInfo or {})
-			end
 			if (name and filter.text and strfind(strlower(name), strlower(filter.text))) and (not fClass or (class == fClass and (not fSubClass or subClass == fSubClass))) and (not TSM.db.profile.hidePoorQualityItems or rarity > 0) then
 				tinsert(items, itemID)
 				if sortMethod == "name" then

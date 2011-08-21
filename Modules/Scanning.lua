@@ -289,7 +289,7 @@ function Scan:StopScanning(interupted)
 	else
 		-- fires if the scan completed sucessfully
 		TSM:Print(L["Scan complete!"])
-		TSM:ProcessData(Scan.AucData, status.originalQueue)
+		TSM.Data:ProcessData(Scan.AucData, status.originalQueue)
 	end
 	
 	Scan:Unlock()
@@ -319,7 +319,7 @@ function Scan:ProcessImportedData(auctionData)
 			Scan:AddAuctionRecord(itemID, quantity, buyout*quantity)
 		end
 	end
-	TSM:ProcessData(Scan.AucData)
+	TSM.Data:ProcessData(Scan.AucData)
 end
 
 function Scan:IsScanning()
