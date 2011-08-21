@@ -282,7 +282,7 @@ local function OldDeserialize2(data)
 	end
 end
 
-local function OldDeserialize2(data)
+local function OldDeserialize3(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,c,d,f in string.gmatch(data, "!([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^!]+)") do
 		TSM.data[decode(k)] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f)}
