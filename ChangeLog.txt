@@ -1,3 +1,12 @@
+v0.4
+*Optimized the code for searching through AuctionDB's database.
+*Fixed a bug where AuctionDB's ScrollTable in the main TSM window wasn't hiding properly.
+*Added code to support new automatic auction data updater application.
+*Scan data will now be compressed when saved.
+*Replaced auction count code with code to use Gathering's data.
+*Redesigned the market value algorithm to work better with the new auto updating application as well as regular scans.
+*Many other minor bug fixes and improvements.
+
 v0.3.4
 *Updated TOC for patch 4.2.
 
