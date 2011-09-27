@@ -135,7 +135,7 @@ function Data:ProcessData(scanData, queue)
 		end
 	
 		TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0}
-		local marketValue, num = Data:CalculateMarketValue(records, itemID)
+		local marketValue, num = Data:CalculateMarketValue(records)
 		
 		if type(TSM.data[itemID].scans[day]) == "number" then
 			TSM.data[itemID].scans[day] = {TSM.data[itemID].scans[day]}
@@ -151,7 +151,7 @@ function Data:ProcessData(scanData, queue)
 	end
 end
 
-function Data:CalculateMarketValue(records, itemID)
+function Data:CalculateMarketValue(records)
 	local totalNum, totalBuyout = 0, 0
 	
 	for i=1, #records do
