@@ -99,7 +99,7 @@ function Config:UpdateItems()
 	end
 	
 	if TSM.db.profile.resultsSortOrder == "ascending" then
-		sort(items, function(a, b) return (cache[a] or 1/0) < (cache[b] or 1/0) end)
+		sort(items, function(a, b) return (cache[a] or math.huge) < (cache[b] or math.huge) end)
 	else
 		sort(items, function(a, b) return (cache[a] or 0) > (cache[b] or 0) end)
 	end

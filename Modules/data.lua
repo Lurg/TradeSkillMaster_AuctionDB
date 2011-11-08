@@ -166,14 +166,14 @@ function Data:CalculateMarketValue(records)
 		end
 	end
 	
-	local uncorrectedMean = totalBuyout / totalNum
+	local uncorrectedMean = TSMAPI:SafeDivide(totalBuyout, totalNum)
 	local varience = 0
 	
 	for i=1, totalNum do
 		varience = varience + (records[i]-uncorrectedMean)^2
 	end
 	
-	local stdDev = sqrt(varience/totalNum)
+	local stdDev = sqrt(TSMAPI:SafeDivide(varience, totalNum))
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
 	
 	for i=1, totalNum do
@@ -183,7 +183,7 @@ function Data:CalculateMarketValue(records)
 		end
 	end
 	
-	local correctedMean = correctedTotalBuyout / correctedTotalNum
+	local correctedMean = TSMAPI:SafeDivide(correctedTotalBuyout, correctedTotalNum)
 	
 	return correctedMean, totalNum
 end

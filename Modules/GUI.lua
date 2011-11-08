@@ -183,7 +183,7 @@ end
 function GUI:LoadSidebar(frame)
 	local function GetAllReady()
 		if not select(2, CanSendAuctionQuery()) then
-			local previous = TSM.db.profile.lastGetAll or 1/0
+			local previous = TSM.db.profile.lastGetAll or math.huge
 			if previous > (time() - 15*60) then
 				local diff = previous + 15*60 - time()
 				local diffMin = math.floor(diff/60)
