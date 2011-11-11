@@ -217,7 +217,10 @@ function Scan:ScanAuctions()
 	-- ex. "Eternal Earthsiege Diamond" will not get stored when we search for "Eternal Earth"
 	for i=1, shown do
 		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		local name, _, quantity, _, _, _, _, _, buyout = GetAuctionItemInfo("list", i)
+		local name, _, quantity, _, _, _, _, _, buyout, newBuyout = GetAuctionItemInfo("list", i)
+		if select(4, GetBuildInfo()) >= 40300 then -- fix for added paramter in 4.3
+			buyout = newBuyout
+		end
 		Scan:AddAuctionRecord(itemID, quantity, buyout)
 	end
 
@@ -344,7 +347,10 @@ function Scan:StartGetAllScan()
 			if not AuctionFrame:IsVisible() then self:Hide() end
 			for i=1, 200 do
 				local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", self.num))
-				local name, _, quantity, _, _, _, _, _, buyout = GetAuctionItemInfo("list", self.num)
+				local name, _, quantity, _, _, _, _, _, buyout, newBuyout = GetAuctionItemInfo("list", self.num)
+				if select(4, GetBuildInfo()) >= 40300 then -- fix for added paramter in 4.3
+					buyout = newBuyout
+				end
 				if self.tries == 0 or (itemID and quantity and buyout) then
 					self.num = self.num + 1
 					self.tries = 3
