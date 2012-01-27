@@ -13,25 +13,10 @@
 local TSM = select(2, ...)
 local Data = TSM:NewModule("Data")
 
+-- weight for the market value from X days ago (where X is the index of the table)
 local WEIGHTS = {[0] = 132, [1] = 125, [2] = 100, [3] = 75, [4] = 45, [5] = 34, [6] = 33,
 	[7] = 38, [8] = 28, [9] = 21, [10] = 15, [11] = 10, [12] = 7, [13] = 5, [14] = 4}
-	
-function Data:ConvertData()
-	local isOld = false
-	for _, data in pairs(TSM.data) do
-		isOld = not data.scans
-		break
-	end
-	
-	if isOld then
-		for itemID, data in pairs(TSM.data) do
-			local lastScanDay = Data:GetDay(data.lastScan)
-			data.scans = {}
-			data.scans[lastScanDay] = {floor(data.marketValue + 0.5)}
-		end
-	end
-end
-	
+
 function Data:GetDay(t)
 	t = t or time()
 	return floor(t / (60*60*24))
@@ -43,7 +28,7 @@ function Data:UpdateMarketValue(itemData)
 
 	local scans = CopyTable(itemData.scans)
 	itemData.scans = {}
-	itemData.scans[day] = CopyTable(scans[day])
+	itemData.scans[day] = scans[day] and CopyTable(scans[day])
 	for i=1, 14 do
 		local dayScans = scans[day-i]
 		if type(dayScans) == "table" then
@@ -63,7 +48,7 @@ function Data:GetAverage(data)
 		num = num + 1
 	end
 	
-	return floor(total / num + 0.5)
+	return num > 0 and floor((total / num) + 0.5)
 end
 
 -- gets the market value given a set of scans
@@ -74,17 +59,25 @@ function Data:GetMarketValue(scans)
 	for i=0, 14 do
 		local data = scans[day-i]
 		if data then
-			local dayMarketValue = data
+			local dayMarketValue
 			if type(data) == "table" then
 				dayMarketValue = Data:GetAverage(data)
+			else
+				dayMarketValue = data
 			end
-			
-			totalAmount = totalAmount + (WEIGHTS[i] * dayMarketValue)
-			totalWeight = totalWeight + WEIGHTS[i]
+			if dayMarketValue then
+				totalAmount = totalAmount + (WEIGHTS[i] * dayMarketValue)
+				totalWeight = totalWeight + WEIGHTS[i]
+			end
+		end
+	end
+	for i in ipairs(scans) do
+		if i < day - 14 then
+			scans[i] = nil
 		end
 	end
 	
-	return floor(totalAmount / totalWeight + 0.5)
+	return totalWeight > 0 and floor(TSMAPI:SafeDivide(totalAmount, totalWeight) + 0.5) or 0
 end
 
 
@@ -127,15 +120,8 @@ function Data:ProcessData(scanData, queue)
 	
 	-- go through each item and figure out the market value / update the data table
 	for itemID, data in pairs(scanData) do
-		local records = {}
-		for _, record in pairs(data.records) do
-			for i=1, record.quantity do
-				tinsert(records, record.buyout)
-			end
-		end
-	
 		TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0}
-		local marketValue, num = Data:CalculateMarketValue(records)
+		local marketValue, num = Data:CalculateMarketValue(data.records)
 		
 		if type(TSM.data[itemID].scans[day]) == "number" then
 			TSM.data[itemID].scans[day] = {TSM.data[itemID].scans[day]}
@@ -146,8 +132,10 @@ function Data:ProcessData(scanData, queue)
 		TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + num)
 		TSM.data[itemID].currentQuantity = data.quantity
 		TSM.data[itemID].lastScan = time()
-		TSM.data[itemID].minBuyout = data.minBuyout
+		TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 		Data:UpdateMarketValue(TSM.data[itemID])
+		TSM.data[itemID].cache = nil
+		TSM.toCache[itemID] = true
 	end
 end
 
@@ -183,7 +171,7 @@ function Data:CalculateMarketValue(records)
 		end
 	end
 	
-	local correctedMean = TSMAPI:SafeDivide(correctedTotalBuyout, correctedTotalNum)
+	local correctedMean = floor(TSMAPI:SafeDivide(correctedTotalBuyout, correctedTotalNum) + 0.5)
 	
 	return correctedMean, totalNum
 end

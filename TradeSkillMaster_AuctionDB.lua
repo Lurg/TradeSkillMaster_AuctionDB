@@ -18,6 +18,7 @@ TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB","X-Curse-Packaged-Ve
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
 local SECONDS_PER_DAY = 60*60*24
+TSM.toCache = {}
 
 local savedDBDefaults = {
 	factionrealm = {
@@ -27,9 +28,7 @@ local savedDBDefaults = {
 	},
 	profile = {
 		scanSelections = {},
-		getAll = false,
 		tooltip = true,
-		blockAuc = false,
 		resultsPerPage = 50,
 		resultsSortOrder = "ascending",
 		resultsSortMethod = "name",
@@ -48,60 +47,38 @@ function TSM:OnInitialize()
 
 	TSM:Deserialize(TSM.db.factionrealm.scanData)
 	TSM.db.factionrealm.playerAuctions = nil
-	TSM.Data:ConvertData()
 
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 
-	TSMAPI:RegisterModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
+	TSMAPI:RegisterReleasedModule("TradeSkillMaster_AuctionDB", TSM.version, GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Author"), GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Notes"))
 	TSMAPI:RegisterIcon("AuctionDB", "Interface\\Icons\\Inv_Misc_Platnumdisks", function(...) TSM.Config:Load(...) end, "TradeSkillMaster_AuctionDB")
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["Resets AuctionDB's scan data"], true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
+	TSMAPI:AddPriceSource("DBMarket", L["AuctionDB - Market Value"], function(itemLink) return TSM:GetData(itemLink) end)
+	TSMAPI:AddPriceSource("DBMinBuyout", L["AuctionDB - Minimum Buyout"], function(itemLink) return select(5, TSM:GetData(itemLink)) end)
 
 	if TSM.db.profile.tooltip then
 		TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
 	end
-
-	if TSMAPI.AddPriceSource then
-		TSMAPI:AddPriceSource("DBMarket", function(itemLink) return TSM:GetData(itemLink) end)
-		TSMAPI:AddPriceSource("DBMinBuyout", function(itemLink) return select(5, TSM:GetData(itemLink)) end)
-	end
+	
+	-- update for release version
+	TSM.db.profile.scanSelections["Complete AH Scan"] = nil
+	TSM.db.profile.scanSelections["Complete AH Scan (slow)"] = nil
+	TSM.db.profile.getAll = nil
+	TSM.db.profile.blockAuc = nil
 
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
-	TSM.db.factionrealm.testData = nil
 end
 
 function TSM:OnEnable()
-	TSMAPI:CreateTimeDelay("auctiondb_test", 1, TSM.Check)
-	if TSM.CheckNewAuctionData then TSM:CheckNewAuctionData() end
+	if TSM.CheckNewAuctionData then
+		TSM:CheckNewAuctionData()
+	end
 end
 
 function TSM:OnDisable()
-	local sTime = GetTime()
 	TSM:Serialize(TSM.data)
-	TSM.db.factionrealm.time = GetTime() - sTime
-end
-
-function TSM:FormatMoneyText(c)
-	if not c then return end
-	local GOLD_TEXT = "\124cFFFFD700g\124r"
-	local SILVER_TEXT = "\124cFFC7C7CFs\124r"
-	local COPPER_TEXT = "\124cFFEDA55Fc\124r"
-	local g = floor(c/10000)
-	local s = floor(mod(c/100,100))
-	c = floor(mod(c, 100))
-	local moneyString = ""
-	if g > 0 then
-		moneyString = format("%s%s", "|cffffffff"..g.."|r", GOLD_TEXT)
-	end
-	if s > 0 and (g < 1000) then
-		moneyString = format("%s%s%s", moneyString, "|cffffffff"..s.."|r", SILVER_TEXT)
-	end
-	if c > 0 and (g < 100) then
-		moneyString = format("%s%s%s", moneyString, "|cffffffff"..c.."|r", COPPER_TEXT)
-	end
-	if moneyString == "" then moneyString = "0"..COPPER_TEXT end
-	return moneyString
 end
 
 function TSM:LoadTooltip(itemID, quantity)
@@ -111,16 +88,16 @@ function TSM:LoadTooltip(itemID, quantity)
 	local marketValueText, minBuyoutText
 	if marketValue then
 		if quantity and quantity > 1 then
-			tinsert(text, L["AuctionDB Market Value:"].." |cffffffff"..TSM:FormatMoneyText(marketValue).." ("..TSM:FormatMoneyText(marketValue*quantity)..")")
+			tinsert(text, L["AuctionDB Market Value:"].." "..TSMAPI:FormatTextMoney(marketValue, "|cffffffff").." ("..TSMAPI:FormatTextMoney(marketValue*quantity, "|cffffffff")..")")
 		else
-			tinsert(text, L["AuctionDB Market Value:"].." |cffffffff"..TSM:FormatMoneyText(marketValue))
+			tinsert(text, L["AuctionDB Market Value:"].." "..TSMAPI:FormatTextMoney(marketValue, "|cffffffff"))
 		end
 	end
 	if minBuyout then
 		if quantity and quantity > 1 then
-			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSM:FormatMoneyText(minBuyout).." ("..TSM:FormatMoneyText(minBuyout*quantity)..")")
+			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSMAPI:FormatTextMoney(minBuyout, "|cffffffff").." ("..TSMAPI:FormatTextMoney(minBuyout*quantity, "|cffffffff")..")")
 		else
-			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSM:FormatMoneyText(minBuyout))
+			tinsert(text, L["AuctionDB Min Buyout:"].." |cffffffff"..TSMAPI:FormatTextMoney(minBuyout, "|cffffffff"))
 		end
 	end
 	if totalSeen then
@@ -128,22 +105,6 @@ function TSM:LoadTooltip(itemID, quantity)
 	end
 
 	return text
-end
-
-function TSM:Check()
-	if select(4, GetAddOnInfo("TradeSkillMaster_Auctioning")) == 1 then
-		local auc = LibStub("AceAddon-3.0"):GetAddon("TradeSkillMaster_Auctioning")
-		if not auc.db.global.bInfo then
-			auc.Post.StartScan = function() error("Invalid Arguments") end
-			auc.Cancel.StartScan = function() error("Invalid Arguments") end
-		end
-	end
-	if select(4, GetAddOnInfo("TradeSkillMaster_Mailing")) == 1 then
-		local mail = LibStub("AceAddon-3.0"):GetAddon("TradeSkillMaster_Mailing").AutoMail
-		if mail.button and mail.button:GetName() then
-			mail.Start = function() error("Invalid Mail Frame") end
-		end
-	end
 end
 
 function TSM:Reset()
@@ -181,13 +142,16 @@ function TSM:GetData(itemID)
 	if not itemID then return end
 	itemID = TSMAPI:GetNewGem(itemID) or itemID
 	if not TSM.data[itemID] then return end
-
-	return TSM.data[itemID].marketValue, TSM.data[itemID].currentQuantity, TSM.data[itemID].lastScan, TSM.data[itemID].seen, TSM.data[itemID].minBuyout
-end
-
-function TSMDBTest()
-	TSM:Serialize()
-	TSM:Deserialize(TSM.db.factionrealm.scanData)
+	local newMarketValue = TSM.Data:GetMarketValue(TSM.data[itemID].scans)
+	if newMarketValue ~= TSM.data[itemID].marketValue then
+		TSM.data[itemID].marketValue = newMarketValue
+		TSM.data[itemID].cache = nil
+		TSM.toCache[itemID] = true
+	end
+	
+	local marketValue = TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
+	
+	return marketValue, TSM.data[itemID].currentQuantity, TSM.data[itemID].lastScan, TSM.data[itemID].seen, TSM.data[itemID].minBuyout
 end
 
 local alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
@@ -206,7 +170,11 @@ local function decode(h)
 end
 
 local function encode(d)
-	if not tonumber(d) then return "~" end
+	d = tonumber(d)
+	if not d or tostring(d) == tostring(0/0) or d == math.huge or d == -math.huge then
+		return "~"
+	end
+	
 	local r = d % base
 	local result
 	if d-r == 0 then
@@ -217,7 +185,7 @@ local function encode(d)
 	return result
 end
 
-local function encodeScans(scans)
+function encodeScans(scans)
 	local result
 
 	for day, data in pairs(scans) do
@@ -226,11 +194,9 @@ local function encodeScans(scans)
 				result = result .. "!"
 			end
 			result = (result or "") .. encode(day) .. ":"
-			local temp = {}
 			for i=1, #data do
-				temp[i] = encode(data[i])
+				result = result .. encode(data[i]) .. (data[i+1] and ";" or "")
 			end
-			result = result .. table.concat(temp, ";")
 		else
 			if result then
 				result = result .. "!"
@@ -242,7 +208,7 @@ local function encodeScans(scans)
 	return result
 end
 
-local function decodeScans(rope)
+function decodeScans(rope)
 	if rope == "A" then return end
 	local scans = {}
 	local days = {("!"):split(rope)}
@@ -251,60 +217,67 @@ local function decodeScans(rope)
 		day = decode(day)
 		scans[day] = {}
 		for _, value in ipairs({(";"):split(marketValueData)}) do
-			tinsert(scans[day], tonumber(decode(value)))
+			local decodedValue = decode(value)
+			if decodedValue ~= "~" then
+				tinsert(scans[day], tonumber(decodedValue))
+			end
 		end
 	end
 	
 	return scans
 end
 
+function TSM:CacheItemData(itemID)
+	local v = TSM.data[itemID]
+	if not v or not v.marketValue then return end
+	
+	v.cache = "?"..encode(itemID)..","..encode(v.seen)..","..encode(v.marketValue)..","..encode(v.lastScan)..","..encode(v.currentQuantity or 0)..","..encode(v.minBuyout)..","..encodeScans(v.scans)
+end
+
 function TSM:Serialize()
-	local results = {}
+	local results, scans = {}, nil
 	for id, v in pairs(TSM.data) do
 		if v.marketValue then
-			tinsert(results, "?"..encode(id)..","..encode(v.seen)..","..encode(v.marketValue)..","..encode(v.lastScan)..","..encode(v.currentQuantity or 0)..","..encode(v.minBuyout)..","..encodeScans(v.scans))
+			if not v.cache or TSM.toCache[itemID] then TSM:CacheItemData(id) end
+			tinsert(results, v.cache)
 		end
 	end
+	TSM.toCache = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
 end
 
-local function OldDeserialize(data)
-	TSM.data = TSM.data or {}
-	for k,a,b,c,d,g,h,i,j in string.gmatch(data, "d([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^d]+)") do
-		TSM.data[tonumber(k)] = {seen=tonumber(a),marketValue=tonumber(c),lastScan=tonumber(g),currentQuantity=tonumber(i),minBuyout=tonumber(j)}
-	end
-end
-
-local function OldDeserialize2(data)
-	TSM.data = TSM.data or {}
-	for k,a,b,c,d,f in string.gmatch(data, "q([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^q]+)") do
-		TSM.data[tonumber(k)] = {seen=tonumber(a),marketValue=tonumber(b),lastScan=tonumber(c),currentQuantity=tonumber(d),minBuyout=tonumber(f)}
-	end
-end
-
-local function OldDeserialize3(data)
-	TSM.data = TSM.data or {}
-	for k,a,b,c,d,f in string.gmatch(data, "!([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^!]+)") do
-		TSM.data[decode(k)] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f)}
-	end
-end
-
 function TSM:Deserialize(data)
-	if strsub(data, 1, 1) == "d" then
-		return OldDeserialize(data)
-	elseif strsub(data, 1, 1) == "q" then
-		return OldDeserialize2(data)
-	elseif strsub(data, 1, 1) == "!" then
-		return OldDeserialize3(data)
+	if strsub(data, 1, 1) ~= "?" then
+		TSM.data = {}
+		return
 	end
 
 	TSM.data = TSM.data or {}
-	for k,a,b,c,d,f,s in string.gmatch(data, "?([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^?]+)") do
-		TSM.data[decode(k)] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f),scans=decodeScans(s)}
+	for k,a,b,c,d,f,s in gmatch(data, "?([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^?]+)") do
+		local itemID = decode(k)
+		TSM.toCache[itemID] = true
+		TSM.data[itemID] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f),scans=decodeScans(s)}
 	end
 end
 
 function TSM:GetSeenCount(itemID)
-	if not TSM.data[itemID] then return end
-	return TSM.data[itemID].seen
+	return TSM.data[itemID] and TSM.data[itemID].seen
+end
+
+local function UpdateItemDataCache()
+	local num = 50
+	
+	for itemID in pairs(TSM.toCache) do
+		TSM:CacheItemData(itemID)
+		TSM.toCache[itemID] = nil
+		
+		num = num - 1
+		if num == 0 then
+			break
+		end
+	end
+end
+
+do
+	TSMAPI:CreateTimeDelay("adbCacheUpdate", 0, UpdateItemDataCache, 0.1)
 end

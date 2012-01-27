@@ -23,26 +23,6 @@ local ROW_HEIGHT = 16
 
 -- options page
 function Config:Load(parent)
-	local vk = TSMAPI:GetVersionKey("TradeSkillMaster")
-	if not vk or vk < 1 then
-		local page = {
-			{
-				type = "ScrollFrame",
-				layout = "flow",
-				children = {
-					{
-						type = "Label",
-						text = L["Your version of the main TradeSkillMaster addon is out of date. Please update it in order to be able to view this page."],
-						fontObject = GameFontNormalLarge,
-						relativeWidth = 1,
-					},
-				},
-			},
-		}
-		
-		TSMAPI:BuildPage(parent, page)
-		return
-	end
 	filter = {}
 	
 	local tg = AceGUI:Create("TSMTabGroup")
@@ -156,9 +136,9 @@ function Config:LoadSearch(container)
 		for j, subClassName in ipairs({GetAuctionItemSubClasses(i)}) do
 			subClasses[i][j] = subClassName
 		end
-		tinsert(subClasses[i], L["<No Item SubType Filter>"])
+		tinsert(subClasses[i], "")
 	end
-	tinsert(classes, L["<No Item Type Filter>"])
+	tinsert(classes, "")
 
 	local page = {
 		{
@@ -299,7 +279,7 @@ function Config:LoadSearch(container)
 	local colInfo = Config:GetSTColInfo(container.frame:GetWidth())
 
 	if not searchST then
-		searchST = TSMAPI:CreateScrollingTable(colInfo)
+		searchST = TSMAPI:CreateScrollingTable(colInfo, true)
 	end
 	Config:UnhookAll()
 	Config:HookScript(stParent, "OnHide", function() Config:UnhookAll() searchST:Hide() end)
@@ -322,17 +302,38 @@ function Config:LoadSearch(container)
 	end
 	
 	searchST:RegisterEvents({
+		["OnClick"] = function(_, self, data, _, _, rowNum, _, _, button)
+			if rowNum and IsShiftKeyDown() and button == "RightButton" then
+				local itemID = data[rowNum].itemID
+				TSM.data[itemID] = nil
+				TSM:Printf(L["Removed %s from AuctionDB."], select(2, GetItemInfo(itemID)) or itemID)
+				return true
+			end
+		end,
 		["OnEnter"] = function(_, self, data, _, _, rowNum)
 			if not rowNum then return end
 			
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetHyperlink("item:"..data[rowNum].itemID)
-			GameTooltip:Show()
+			GameTooltip:AddLine("\n")
+			GameTooltip:AddLine("|cff99ffff" .. L["Shift-Right-Click to clear all data for this item from AuctionDB."] .. "|r")			GameTooltip:Show()
 		end,
 		["OnLeave"] = function()
 			GameTooltip:ClearLines()
 			GameTooltip:Hide()
 		end})
+end
+
+local function ColSortMethod(st, aRow, bRow, col)
+	local a, b = st:GetCell(aRow, col), st:GetCell(bRow, col)
+	local column = st.cols[col]
+	local direction = column.sort or column.defaultsort or "dsc"
+	local aValue, bValue = ((a.args or {})[1] or a.value), ((b.args or {})[1] or b.value)
+	if direction == "asc" then
+		return aValue < bValue
+	else
+		return aValue > bValue
+	end
 end
 
 local stCols = {
@@ -403,11 +404,11 @@ function Config:GetSearchData()
 							args = {data.currentQuantity},
 						},
 						{
-							value = TSM:FormatMoneyText(data.minBuyout) or "---",
+							value = TSMAPI:FormatTextMoney(data.minBuyout, "|cffffffff") or "---",
 							args = {data.minBuyout or 0},
 						},
 						{
-							value = TSM:FormatMoneyText(data.marketValue) or "---",
+							value = TSMAPI:FormatTextMoney(data.marketValue, "|cffffffff") or "---",
 							args = {data.marketValue or 0},
 						},
 						{
@@ -437,10 +438,8 @@ function Config:LoadOptions(container)
 						{
 							type = "CheckBox",
 							label = L["Enable display of AuctionDB data in tooltip."],
-							value = TSM.db.profile.tooltip,
-							relativeWidth = 0.5,
+							quickCBInfo = {TSM.db.profile, "tooltip"},
 							callback = function(_,_,value)
-									TSM.db.profile.tooltip = value
 									if value then
 										TSMAPI:RegisterTooltip("TradeSkillMaster_AuctionDB", function(...) return TSM:LoadTooltip(...) end)
 									else
@@ -522,9 +521,7 @@ function Config:LoadOptions(container)
 						{
 							type = "CheckBox",
 							label = L["Hide poor quality items"],
-							relativeWidth = 0.5,
-							value = TSM.db.profile.hidePoorQualityItems,
-							callback = function(self,_,value) TSM.db.profile.hidePoorQualityItems = value end,
+							quickCBInfo = {TSM.db.profile, "hidePoorQualityItems"},
 							tooltip = L["If checked, poor quality items won't be shown in the search results."],
 						},
 					},
@@ -532,17 +529,6 @@ function Config:LoadOptions(container)
 			},
 		},
 	}
-	
-	if AucAdvanced then
-		tinsert(page[1].children[1].children, {
-				type = "CheckBox",
-				label = L["Block Auctioneer while Scanning."],
-				value = TSM.db.profile.blockAuc,
-				relativeWidth = 0.5,
-				callback = function(_,_,value) TSM.db.profile.blockAuc = value end,
-				tooltip = L["If checked, Auctioneer will be prevented from scanning / processing AuctionDB's scans."],
-			})
-	end
 	
 	TSMAPI:BuildPage(container, page)
 end

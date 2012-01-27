@@ -1,7 +1,9 @@
-v0.4.1
-*Fixed division by zero and GetAuctionItemInfo errors for 4.3.
-*Updated TOC for patch 4.3.
-*Many other minor bug fixes and improvements.
+v1.0
+*First Release Version!
+
+
+
+**Beta Versions:**
 
 v0.4
 *Optimized the code for searching through AuctionDB's database.

@@ -15,11 +15,11 @@ Locale\koKR.lua
 Locale\ruRU.lua
 Locale\zhCN.lua
 Locale\zhTW.lua
+Locale\ptBR.lua
 
 TradeSkillMaster_AuctionDB.lua
 AuctionData.lua
 Modules\data.lua
-Modules\AuctionScanning.lua
 Modules\Scanning.lua
 Modules\GUI.lua
 Modules\config.lua
