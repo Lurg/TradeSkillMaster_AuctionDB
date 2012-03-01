@@ -18,7 +18,6 @@ TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB","X-Curse-Packaged-Ve
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
 local SECONDS_PER_DAY = 60*60*24
-TSM.toCache = {}
 
 local savedDBDefaults = {
 	factionrealm = {
@@ -145,8 +144,6 @@ function TSM:GetData(itemID)
 	local newMarketValue = TSM.Data:GetMarketValue(TSM.data[itemID].scans)
 	if newMarketValue ~= TSM.data[itemID].marketValue then
 		TSM.data[itemID].marketValue = newMarketValue
-		TSM.data[itemID].cache = nil
-		TSM.toCache[itemID] = true
 	end
 	
 	local marketValue = TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
@@ -156,6 +153,11 @@ end
 
 local alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
 local base = #alpha
+local alphaTable = {}
+for i=1, base do
+	tinsert(alphaTable, strsub(alpha, i, i))
+end
+
 local function decode(h)
 	if strfind(h, "~") then return end
 	local result = 0
@@ -171,18 +173,17 @@ end
 
 local function encode(d)
 	d = tonumber(d)
-	if not d or tostring(d) == tostring(0/0) or d == math.huge or d == -math.huge then
+	if not d or not (d < math.huge and d > 0) then -- this cannot be simplified since 0/0 is neither less than nor greater than any number
 		return "~"
 	end
 	
 	local r = d % base
-	local result
-	if d-r == 0 then
-		result = strsub(alpha, r+1, r+1)
+	local diff = d - r
+	if diff == 0 then
+		return alphaTable[r+1]
 	else
-		result = encode((d-r)/base) .. strsub(alpha, r+1, r+1)
+		return encode((diff)/base) .. alphaTable[r+1]
 	end
-	return result
 end
 
 function encodeScans(scans)
@@ -194,9 +195,12 @@ function encodeScans(scans)
 				result = result .. "!"
 			end
 			result = (result or "") .. encode(day) .. ":"
+			--local dayInfo = {}
 			for i=1, #data do
+				--dayInfo[i] = encode(data[i])
 				result = result .. encode(data[i]) .. (data[i+1] and ";" or "")
 			end
+			--result = result .. table.concat(dayInfo, ";")
 		else
 			if result then
 				result = result .. "!"
@@ -227,23 +231,16 @@ function decodeScans(rope)
 	return scans
 end
 
-function TSM:CacheItemData(itemID)
-	local v = TSM.data[itemID]
-	if not v or not v.marketValue then return end
-	
-	v.cache = "?"..encode(itemID)..","..encode(v.seen)..","..encode(v.marketValue)..","..encode(v.lastScan)..","..encode(v.currentQuantity or 0)..","..encode(v.minBuyout)..","..encodeScans(v.scans)
-end
-
 function TSM:Serialize()
+	debugprofilestart()
 	local results, scans = {}, nil
 	for id, v in pairs(TSM.data) do
 		if v.marketValue then
-			if not v.cache or TSM.toCache[itemID] then TSM:CacheItemData(id) end
-			tinsert(results, v.cache)
+			tinsert(results, "?"..encode(id)..","..encode(v.seen)..","..encode(v.marketValue)..","..encode(v.lastScan)..","..encode(v.currentQuantity or 0)..","..encode(v.minBuyout)..","..encodeScans(v.scans))
 		end
 	end
-	TSM.toCache = {}
 	TSM.db.factionrealm.scanData = table.concat(results)
+	TSM.db.factionrealm.test = debugprofilestop()
 end
 
 function TSM:Deserialize(data)
@@ -255,29 +252,10 @@ function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,c,d,f,s in gmatch(data, "?([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^?]+)") do
 		local itemID = decode(k)
-		TSM.toCache[itemID] = true
 		TSM.data[itemID] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f),scans=decodeScans(s)}
 	end
 end
 
 function TSM:GetSeenCount(itemID)
 	return TSM.data[itemID] and TSM.data[itemID].seen
-end
-
-local function UpdateItemDataCache()
-	local num = 50
-	
-	for itemID in pairs(TSM.toCache) do
-		TSM:CacheItemData(itemID)
-		TSM.toCache[itemID] = nil
-		
-		num = num - 1
-		if num == 0 then
-			break
-		end
-	end
-end
-
-do
-	TSMAPI:CreateTimeDelay("adbCacheUpdate", 0, UpdateItemDataCache, 0.1)
 end

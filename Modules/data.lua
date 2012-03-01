@@ -134,8 +134,6 @@ function Data:ProcessData(scanData, queue)
 		TSM.data[itemID].lastScan = time()
 		TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 		Data:UpdateMarketValue(TSM.data[itemID])
-		TSM.data[itemID].cache = nil
-		TSM.toCache[itemID] = true
 	end
 end
 
