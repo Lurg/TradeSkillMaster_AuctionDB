@@ -252,7 +252,7 @@ function TSM:Deserialize(data)
 	TSM.data = TSM.data or {}
 	for k,a,b,c,d,f,s in gmatch(data, "?([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^?]+)") do
 		local itemID = decode(k)
-		TSM.data[itemID] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=decode(d),minBuyout=decode(f),scans=decodeScans(s)}
+		TSM.data[itemID] = {seen=decode(a),marketValue=decode(b),lastScan=decode(c),currentQuantity=(decode(d) or 0),minBuyout=decode(f),scans=decodeScans(s)}
 	end
 end
 
