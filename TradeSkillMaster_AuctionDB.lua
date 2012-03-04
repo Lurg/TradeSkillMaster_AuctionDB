@@ -232,7 +232,6 @@ function decodeScans(rope)
 end
 
 function TSM:Serialize()
-	debugprofilestart()
 	local results, scans = {}, nil
 	for id, v in pairs(TSM.data) do
 		if v.marketValue then
@@ -240,7 +239,6 @@ function TSM:Serialize()
 		end
 	end
 	TSM.db.factionrealm.scanData = table.concat(results)
-	TSM.db.factionrealm.test = debugprofilestop()
 end
 
 function TSM:Deserialize(data)
