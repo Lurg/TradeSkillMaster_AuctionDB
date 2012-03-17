@@ -154,8 +154,11 @@ end
 local alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
 local base = #alpha
 local alphaTable = {}
+local alphaTableLookup = {}
 for i=1, base do
-	tinsert(alphaTable, strsub(alpha, i, i))
+	local char = strsub(alpha, i, i)
+	tinsert(alphaTable, char)
+	alphaTableLookup[char] = i
 end
 
 local function decode(h)
@@ -164,7 +167,7 @@ local function decode(h)
 
 	local i = #h - 1
 	for w in string.gmatch(h, "([A-Za-z0-9_=])") do
-		result = result + (strfind(alpha, w)-1)*(base^i)
+		result = result + (alphaTableLookup[w]-1)*(base^i)
 		i = i - 1
 	end
 
