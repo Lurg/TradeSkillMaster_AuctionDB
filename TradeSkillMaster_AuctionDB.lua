@@ -195,12 +195,9 @@ function encodeScans(scans)
 				result = result .. "!"
 			end
 			result = (result or "") .. encode(day) .. ":"
-			--local dayInfo = {}
 			for i=1, #data do
-				--dayInfo[i] = encode(data[i])
 				result = result .. encode(data[i]) .. (data[i+1] and ";" or "")
 			end
-			--result = result .. table.concat(dayInfo, ";")
 		else
 			if result then
 				result = result .. "!"
