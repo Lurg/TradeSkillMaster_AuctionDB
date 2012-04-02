@@ -24,6 +24,7 @@ local savedDBDefaults = {
 		scanData = "",
 		time = 0,
 		lastAutoUpdate = 0;
+		lastCompleteScan = 0;
 	},
 	profile = {
 		scanSelections = {},
@@ -54,6 +55,7 @@ function TSM:OnInitialize()
 	TSMAPI:RegisterSlashCommand("adbreset", TSM.Reset, L["Resets AuctionDB's scan data"], true)
 	TSMAPI:RegisterData("market", TSM.GetData)
 	TSMAPI:RegisterData("seenCount", TSM.GetSeenCount)
+	TSMAPI:RegisterData("lastCompleteScan", TSM.GetLastCompleteScan)
 	TSMAPI:AddPriceSource("DBMarket", L["AuctionDB - Market Value"], function(itemLink) return TSM:GetData(itemLink) end)
 	TSMAPI:AddPriceSource("DBMinBuyout", L["AuctionDB - Minimum Buyout"], function(itemLink) return select(5, TSM:GetData(itemLink)) end)
 
@@ -256,4 +258,15 @@ end
 
 function TSM:GetSeenCount(itemID)
 	return TSM.data[itemID] and TSM.data[itemID].seen
+end
+
+function TSM:GetLastCompleteScan()
+	local lastScan = {scanTime=TSM.db.factionrealm.lastCompleteScan}
+	for itemID, data in pairs(TSM.data) do
+		if data.lastScan == TSM.db.factionrealm.lastCompleteScan then
+			lastScan[itemID] = {marketValue=data.marketValue, minBuyout=data.minBuyout}
+		end
+	end
+	
+	return lastScan
 end
