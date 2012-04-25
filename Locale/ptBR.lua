@@ -15,4 +15,4 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("TradeSkillMaster_AuctionDB", "ptBR")
 if not L then return end
 
---@localization(locale="ptBR.lua", format="lua_additive_table")@ 
+--@localization(locale="ptBR", format="lua_additive_table")@ 
