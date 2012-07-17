@@ -13,7 +13,6 @@
 local TSM = select(2, ...)
 TSM = LibStub("AceAddon-3.0"):NewAddon(TSM, "TradeSkillMaster_AuctionDB", "AceEvent-3.0", "AceConsole-3.0")
 local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
-local Json = LibStub("LibParse")
 
 TSM.version = GetAddOnMetadata("TradeSkillMaster_AuctionDB","X-Curse-Packaged-Version") or GetAddOnMetadata("TradeSkillMaster_AuctionDB", "Version") -- current version of the addon
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
@@ -91,7 +90,7 @@ function TSM:OnEnable()
 		for realmInfo, data in pairs(TSM.AppData) do
 			local r, f, t = ("-"):split(realmInfo)
 			if realm == r and (faction == f or f == "Both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
-				newData[tonumber(t)] = Json:JSONDecode(data)
+				newData[tonumber(t)] = LibStub("LibParse"):JSONDecode(data)
 				numNewScans = numNewScans + 1
 			end
 		end
