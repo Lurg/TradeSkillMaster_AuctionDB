@@ -253,6 +253,6 @@ function private:CreateStartScanContent(parent)
 	text:SetHeight(60)
 	text:SetJustifyH("LEFT")
 	text:SetJustifyV("CENTER")
-	text:SetText(format(TSMAPI.BLUE..L["Never scan the auction house again!"].."|r "..L["The author of TradeSkillMaster has created an application which uses blizzard's online auction house APIs to update your AuctionDB data automatically. Check it out at the link in TSM_AuctionDB's description on curse or at: %s"], TSMAPI.BLUE.."http://bit.ly/uuiiNL|r"))
+	text:SetText(format(TSMAPI.Design:GetInlineColor("link")..L["Never scan the auction house again!"].."|r "..L["The author of TradeSkillMaster has created an application which uses blizzard's online auction house APIs to update your AuctionDB data automatically. Check it out at the link in TSM_AuctionDB's description on curse or at: %s"], TSMAPI.Design:GetInlineColor("link").."http://bit.ly/uuiiNL|r"))
 	return frame
 end

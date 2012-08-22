@@ -301,7 +301,8 @@ function Config:LoadSearch(container)
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetHyperlink("item:"..data[rowNum].itemID)
 			GameTooltip:AddLine("\n")
-			GameTooltip:AddLine("|cff99ffff" .. L["Shift-Right-Click to clear all data for this item from AuctionDB."] .. "|r")			GameTooltip:Show()
+			GameTooltip:AddLine(TSMAPI.Design:GetInlineColor("link2")..L["Shift-Right-Click to clear all data for this item from AuctionDB."].."|r")
+			GameTooltip:Show()
 		end,
 		["OnLeave"] = function()
 			GameTooltip:ClearLines()
@@ -397,7 +398,7 @@ function Config:GetSearchData()
 							args = {data.marketValue or 0},
 						},
 						{
-							value = (timeDiff and "|cff99ffff"..format(L["%s ago"], timeDiff).."|r" or "|cff99ffff---|r"),
+							value = (timeDiff and TSMAPI.Design:GetInlineColor("link2")..format(L["%s ago"], timeDiff).."|r" or TSMAPI.Design:GetInlineColor("link2").."---|r"),
 							args = {timeDiff or 0},
 						},
 					},
