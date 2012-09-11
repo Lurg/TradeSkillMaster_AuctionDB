@@ -19,7 +19,6 @@ Locale\ptBR.lua
 
 TradeSkillMaster_AuctionDB.lua
 AppData.lua
-AuctionData.lua
 Modules\data.lua
 Modules\Scanning.lua
 Modules\GUI.lua
