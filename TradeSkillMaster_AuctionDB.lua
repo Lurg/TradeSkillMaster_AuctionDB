@@ -84,7 +84,12 @@ function TSM:OnEnable()
 		local newData = {}
 		local numNewScans = 0
 		for realmInfo, data in pairs(TSM.AppData) do
-			local r, f, t = ("-"):split(realmInfo)
+			local r, f, t, extra = ("-"):split(realmInfo)
+			if extra then
+				r = r.."-"..f
+				f = t
+				t = extra
+			end
 			if realm == r and (faction == f or f == "Both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
 				newData[tonumber(t)] = LibStub("LibParse"):JSONDecode(data)
 				numNewScans = numNewScans + 1
