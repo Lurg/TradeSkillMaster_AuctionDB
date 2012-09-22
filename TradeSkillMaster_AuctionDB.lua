@@ -83,8 +83,10 @@ function TSM:OnEnable()
 		local faction = UnitFactionGroup("player")
 		local newData = {}
 		local numNewScans = 0
+		TSMTEST = {}
 		for realmInfo, data in pairs(TSM.AppData) do
 			local r, f, t, extra = ("-"):split(realmInfo)
+			tinsert(TSMTEST, {r, f, t, extra})
 			if extra then
 				r = r.."-"..f
 				f = t
