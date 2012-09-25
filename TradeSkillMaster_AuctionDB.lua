@@ -125,6 +125,8 @@ function TSM:OnEnable()
 			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
 			TSM:Printf("Imported %s scans worth of new auction data!", numNewScans)
 		end
+		wipe(TSM.AppData)
+		collectgarbage()
 	end
 end
 
