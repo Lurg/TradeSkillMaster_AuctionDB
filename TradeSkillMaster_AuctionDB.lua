@@ -112,7 +112,7 @@ function TSM:OnEnable()
 				
 				TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + num)
 				
-				if TSM.data[itemID].lastScan < epochTime then
+				if not TSM.data[itemID].lastScan or TSM.data[itemID].lastScan < epochTime then
 					TSM.data[itemID].currentQuantity = num
 					TSM.data[itemID].lastScan = epochTime
 					TSM.data[itemID].minBuyout = minBuyout > 0 and minBuyout or nil
