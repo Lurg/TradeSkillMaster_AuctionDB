@@ -84,6 +84,7 @@ function TSM:OnEnable()
 	if TSM.AppData then
 		local realm = GetRealmName()
 		local faction = UnitFactionGroup("player")
+		if not faction then end
 		local newData = {}
 		local numNewScans = 0
 		for realmInfo, data in pairs(TSM.AppData) do
