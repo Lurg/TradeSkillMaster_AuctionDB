@@ -356,7 +356,7 @@ end
 function TSM:GetDisenchantValue(link)
 	local _, itemLink, quality, ilvl, _, iType = GetItemInfo(link)
 	local id = TSMAPI:GetItemID(itemLink)
-	if not id or TSMAPI.DestroyingData.notDisenchantable[id] or not (iType == ARMOR or iType == WEAPON) then return 0 end
+	if not id or TSMAPI.DestroyingData.notDisenchantable[id] or not (iType == ARMOR or iType == ENCHSLOT_WEAPON) then return 0 end
 	
 	local value = 0
 	for _, data in ipairs(TSMAPI.DestroyingData.disenchant) do
