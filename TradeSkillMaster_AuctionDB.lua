@@ -81,10 +81,24 @@ function TSM:OnInitialize()
 end
 
 function TSM:OnEnable()
+	local function DecodeJSON(data)
+		data = gsub(data, ":", "=")
+		data = gsub(data, "\"horde\"", "horde")
+		data = gsub(data, "\"alliance\"", "alliance")
+		data = gsub(data, "\"m\"", "m")
+		data = gsub(data, "\"b\"", "b")
+		data = gsub(data, "\"n\"", "n")
+		data = gsub(data, "\"([0-9]+)\"", "[%1]")
+		loadstring("TSM_APP_DATA_TMP = "..data.."")()
+		local val = TSM_APP_DATA_TMP
+		TSM_APP_DATA_TMP = nil
+		return val
+	end
+
 	if TSM.AppData then
 		local realm = GetRealmName()
 		local faction = UnitFactionGroup("player")
-		if not faction then end
+		if not faction then return end
 		local newData = {}
 		local numNewScans = 0
 		for realmInfo, data in pairs(TSM.AppData) do
@@ -95,11 +109,12 @@ function TSM:OnEnable()
 				t = extra
 			end
 			if realm == r and (faction == f or f == "Both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
-				newData[tonumber(t)] = LibStub("LibParse"):JSONDecode(data)
+				newData[tonumber(t)] = DecodeJSON(data)
 				numNewScans = numNewScans + 1
 			end
 		end
 		
+		local newItems = {}
 		for epochTime, realmData in pairs(newData) do
 			TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, epochTime)
 			local day = TSM.Data:GetDay(epochTime)
@@ -121,15 +136,21 @@ function TSM:OnEnable()
 					TSM.data[itemID].lastScan = epochTime
 					TSM.data[itemID].minBuyout = minBuyout > 0 and minBuyout or nil
 				end
-				TSM.Data:UpdateMarketValue(TSM.data[itemID])
+				newItems[itemID] = true
 			end
+		end
+		
+		for itemID in pairs(newItems) do
+			TSM.Data:UpdateMarketValue(TSM.data[itemID])
 		end
 		
 		if numNewScans > 0 then
 			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
 			TSM:Printf("Imported %s scans worth of new auction data!", numNewScans)
 		end
+		
 		wipe(TSM.AppData)
+		TSM.AppData = nil
 		collectgarbage()
 	end
 end
