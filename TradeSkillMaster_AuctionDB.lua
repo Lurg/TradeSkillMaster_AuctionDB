@@ -96,8 +96,8 @@ function TSM:OnEnable()
 	end
 
 	if TSM.AppData then
-		local realm = GetRealmName()
-		local faction = UnitFactionGroup("player")
+		local realm = strlower(GetRealmName() or "")
+		local faction = strlower(UnitFactionGroup("player") or "")
 		if not faction then return end
 		local newData = {}
 		local numNewScans = 0
@@ -108,7 +108,9 @@ function TSM:OnEnable()
 				f = t
 				t = extra
 			end
-			if realm == r and (faction == f or f == "Both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
+			r = strlower(r)
+			f = strlower(f)
+			if realm == r and (faction == f or f == "both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
 				newData[tonumber(t)] = DecodeJSON(data)
 				numNewScans = numNewScans + 1
 			end
@@ -118,7 +120,7 @@ function TSM:OnEnable()
 		for epochTime, realmData in pairs(newData) do
 			TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, epochTime)
 			local day = TSM.Data:GetDay(epochTime)
-			for itemID, data in pairs(realmData[strlower(faction)]) do
+			for itemID, data in pairs(realmData[faction]) do
 				itemID = tonumber(itemID)
 				TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0, lastScan=0}
 				local marketValue, minBuyout, num = tonumber(data.m), tonumber(data.b), tonumber(data.n)
