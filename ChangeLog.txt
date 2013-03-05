@@ -1,3 +1,12 @@
+v1.4
+*Updated TOC for patch 5.2.
+*Updated for new TSM application.
+*AuctionDB will no longer freeze the game while processing data from the TSM application.
+*Updated the style of AuctionDB's tooltips.
+*Fixed a bug with the scrolling table shrinking to half width in some situations.
+*Greatly increased the efficiency of the code which imports TSM app data.
+*Many other minor bug fixes and improvements.
+
 v1.3
 *Fixed some divide by zero issues which will cause errors in 5.0.4.
 *Added support for new TSM application.
