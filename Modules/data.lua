@@ -80,7 +80,7 @@ function Data:GetMarketValue(scans)
 	return totalWeight > 0 and floor(TSMAPI:SafeDivide(totalAmount, totalWeight) + 0.5) or 0
 end
 
-function Data:ProcessData(scanData, clearMinBuyouts)
+function Data:ProcessData(scanData, clearMinBuyouts, professionScan)
 	local day = Data:GetDay()
 	if clearMinBuyouts then
 		-- wipe all the minBuyout data
@@ -111,7 +111,13 @@ function Data:ProcessData(scanData, clearMinBuyouts)
 			
 			TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + data.quantity)
 			TSM.data[itemID].currentQuantity = data.quantity
-			TSM.data[itemID].lastScan = time()
+
+			if professionScan then
+				TSM.data[itemID].lastScan = time()
+			else
+				TSM.data[itemID].lastScan =	TSM.db.factionrealm.lastCompleteScan
+			end
+
 			TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 			Data:UpdateMarketValue(TSM.data[itemID])
 			

@@ -475,7 +475,7 @@ function Scan:ProcessScanData(scanData)
 		TSM.db.factionrealm.lastCompleteScan = time()
 	end
 	
-	TSM.Data:ProcessData(data, isScanning == "GetAll Scan" or isScanning == "Full Scan")
+	TSM.Data:ProcessData(data, isScanning == "GetAll Scan" or isScanning == "Full Scan", isScanning == "Profession Scan")
 end
 
 function Scan:ProcessImportedData(auctionData)
