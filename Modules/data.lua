@@ -1,13 +1,10 @@
--- ------------------------------------------------------------------------------------- --
--- 					TradeSkillMaster_AuctionDB - AddOn by Sapu94							 	  	  --
---   http://wow.curse.com/downloads/wow-addons/details/tradeskillmaster_auctiondb.aspx   --
---																													  --
---		This addon is licensed under the CC BY-NC-ND 3.0 license as described at the		  --
---				following url: http://creativecommons.org/licenses/by-nc-nd/3.0/			 	  --
--- 	Please contact the author via email at sapu94@gmail.com with any questions or		  --
---		concerns regarding this license.																	  --
--- ------------------------------------------------------------------------------------- --
-
+-- ------------------------------------------------------------------------------ --
+--                           TradeSkillMaster_AuctionDB                           --
+--           http://www.curse.com/addons/wow/tradeskillmaster_auctiondb           --
+--                                                                                --
+--             A TradeSkillMaster Addon (http://tradeskillmaster.com)             --
+--    All Rights Reserved* - Detailed license information included with addon.    --
+-- ------------------------------------------------------------------------------ --
 
 -- load the parent file (TSM) into a local variable and register this file as a module
 local TSM = select(2, ...)
@@ -16,6 +13,9 @@ local Data = TSM:NewModule("Data")
 -- weight for the market value from X days ago (where X is the index of the table)
 local WEIGHTS = {[0] = 132, [1] = 125, [2] = 100, [3] = 75, [4] = 45, [5] = 34, [6] = 33,
 	[7] = 38, [8] = 28, [9] = 21, [10] = 15, [11] = 10, [12] = 7, [13] = 5, [14] = 4}
+local MIN_PERCENTILE = 0.15 -- consider at least the lowest 15% of auctions
+local MAX_PERCENTILE = 0.30 -- consider at most the lowest 30% of auctions
+local MAX_JUMP = 1.2 -- between the min and max percentiles, any increase in price over 120% will trigger a discard of remaining auctions
 
 function Data:GetDay(t)
 	t = t or time()
@@ -77,17 +77,17 @@ function Data:GetMarketValue(scans)
 		end
 	end
 	
-	return totalWeight > 0 and floor(TSMAPI:SafeDivide(totalAmount, totalWeight) + 0.5) or 0
+	return totalWeight > 0 and floor(totalAmount / totalWeight + 0.5) or 0
 end
 
-function Data:ProcessData(scanData, clearMinBuyouts, professionScan)
+function Data:ProcessData(scanData)
+	if TSM.processingData then return TSMAPI:CreateTimeDelay("adbAlreadyProcessing", 0.2, function() Data:ProcessData(scanData) end) end
+
 	local day = Data:GetDay()
-	if clearMinBuyouts then
-		-- wipe all the minBuyout data
-		for itemID, data in pairs(TSM.data) do
-			data.minBuyout = nil
-			data.currentQuantity = 0
-		end
+	-- wipe all the minBuyout data
+	for itemID, data in pairs(TSM.data) do
+		data.minBuyout = nil
+		data.currentQuantity = 0
 	end
 	
 	local scanDataList = {}
@@ -111,50 +111,47 @@ function Data:ProcessData(scanData, clearMinBuyouts, professionScan)
 			
 			TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + data.quantity)
 			TSM.data[itemID].currentQuantity = data.quantity
-
-			if professionScan then
-				TSM.data[itemID].lastScan = time()
-			else
-				TSM.data[itemID].lastScan =	TSM.db.factionrealm.lastCompleteScan
-			end
-
+			TSM.data[itemID].lastScan = TSM.db.factionrealm.lastCompleteScan
 			TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 			Data:UpdateMarketValue(TSM.data[itemID])
 			
 			index = index + 1
 			if index > #scanDataList then
 				TSMAPI:CancelFrame("adbProcessDelay")
+				TSM.processingData = nil
 				break
 			end
 		end
 	end
 	
+	TSM.processingData = true
 	TSMAPI:CreateTimeDelay("adbProcessDelay", 0, DoDataProcessing, 0.1)
 end
 
 function Data:CalculateMarketValue(records)
 	local totalNum, totalBuyout = 0, 0
+	local numRecords = #records
 	
-	for i=1, #records do
+	for i=1, numRecords do
 		totalNum = i - 1
-		if not (i == 1 or i < (#records)*0.3 or (i < (#records)*0.5 and records[i] < 1.2*records[i-1])) then
+		if i ~= 1 and i > numRecords*MIN_PERCENTILE and (i > numRecords*MAX_PERCENTILE or records[i] >= MAX_JUMP*records[i-1]) then
 			break
 		end
 		
 		totalBuyout = totalBuyout + records[i]
-		if i == #records then
+		if i == numRecords then
 			totalNum = i
 		end
 	end
 	
-	local uncorrectedMean = TSMAPI:SafeDivide(totalBuyout, totalNum)
+	local uncorrectedMean = totalBuyout / totalNum
 	local varience = 0
 	
 	for i=1, totalNum do
 		varience = varience + (records[i]-uncorrectedMean)^2
 	end
 	
-	local stdDev = sqrt(TSMAPI:SafeDivide(varience, totalNum))
+	local stdDev = sqrt(varience/totalNum)
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
 	
 	for i=1, totalNum do
@@ -164,7 +161,7 @@ function Data:CalculateMarketValue(records)
 		end
 	end
 	
-	local correctedMean = floor(TSMAPI:SafeDivide(correctedTotalBuyout, correctedTotalNum) + 0.5)
+	local correctedMean = floor(correctedTotalBuyout / correctedTotalNum + 0.5)
 	
 	return correctedMean
 end
