@@ -161,6 +161,7 @@ end
 
 function TSM:GetTooltip(itemString, quantity)
 	if not TSM.db.profile.tooltip then return end
+	if not strfind(itemString, "item:") then return end
 	local itemID = TSMAPI:GetItemID(itemString)
 	if not itemID or not TSM.data[itemID] then return end
 	local text = {}
