@@ -322,7 +322,7 @@ function Config:LoadSearch(container)
 				GameTooltip:Hide()
 			end
 		}
-		Config.st = TSMAPI:CreateScrollingTable(stParent, stCols, handlers, 20)
+		Config.st = TSMAPI:CreateScrollingTable(stParent, stCols, handlers)
 		Config.st:EnableSorting(true)
 	end
 
