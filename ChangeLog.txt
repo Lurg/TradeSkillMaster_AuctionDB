@@ -1,3 +1,8 @@
+v2.0.2
+*Updated scrolling tables.
+*Fixed some 5.4 issues.
+*Updated TOC for patch 5.4.
+
 v2.0.1
 *Fixed issue with battlepet tooltips.
 
