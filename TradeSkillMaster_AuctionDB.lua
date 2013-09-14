@@ -426,7 +426,9 @@ function TSM:GetMarketValue(itemID)
 		itemID = TSMAPI:GetItemID(itemID)
 	end
 	if not itemID or not TSM.data[itemID] then return end
-	TSM.data[itemID].marketValue = TSM.Data:GetMarketValue(TSM.data[itemID].scans)
+	if not TSM.data[itemID].marketValue or TSM.data[itemID].marketValue == 0 then
+		TSM.data[itemID].marketValue = TSM.Data:GetMarketValue(TSM.data[itemID].scans)
+	end
 	return TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
 end
 
