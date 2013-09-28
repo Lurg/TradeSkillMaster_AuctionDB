@@ -118,7 +118,7 @@ function TSM:OnEnable()
 		for epochTime, realmData in pairs(newData) do
 			TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, epochTime)
 			local day = TSM.Data:GetDay(epochTime)
-			for itemID, data in pairs(realmData[faction]) do
+			for itemID, data in pairs(realmData[faction] or {}) do
 				itemID = tonumber(itemID)
 				TSM.data[itemID] = TSM.data[itemID] or { scans = {}, seen = 0, lastScan = 0 }
 				local marketValue, minBuyout, num = tonumber(data.m), tonumber(data.b), tonumber(data.n)
