@@ -80,14 +80,24 @@ function Data:GetMarketValue(scans)
 	return totalWeight > 0 and floor(totalAmount / totalWeight + 0.5) or 0
 end
 
-function Data:ProcessData(scanData)
-	if TSM.processingData then return TSMAPI:CreateTimeDelay("adbAlreadyProcessing", 0.2, function() Data:ProcessData(scanData) end) end
+function Data:ProcessData(scanData, groupItems)
+	if TSM.processingData then return TSMAPI:CreateTimeDelay("adbAlreadyProcessing", 0.2, function() Data:ProcessData(scanData, groupItems) end) end
 
 	local day = Data:GetDay()
 	-- wipe all the minBuyout data
-	for itemID, data in pairs(TSM.data) do
-		data.minBuyout = nil
-		data.currentQuantity = 0
+	if groupItems then
+		for itemString in pairs(groupItems) do
+			local itemID = TSMAPI:GetItemID(itemString)
+			if TSM.data[itemID] then
+				TSM.data[itemID].minBuyout = nil
+				TSM.data[itemID].currentQuantity = 0
+			end
+		end
+	else
+		for itemID, data in pairs(TSM.data) do
+			data.minBuyout = nil
+			data.currentQuantity = 0
+		end
 	end
 	
 	local scanDataList = {}

@@ -11,6 +11,10 @@ local TSM = select(2, ...)
 local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
+Scan.groupScanData = {}
+Scan.filterList = {}
+Scan.numFilters = 0
+
 
 local function ScanCallback(event, ...)
 	if event == "SCAN_PAGE_UPDATE" then
@@ -37,7 +41,6 @@ function Scan.ProcessGetAllScan(self)
 		TSM.GUI:UpdateStatus(L["Running query..."], nil, temp)
 	end
 
-	local test = 0
 	local data = {}
 	for i=1, Scan.getAllLoaded do
 		TSM.GUI:UpdateStatus(format(L["Scanning page %s/%s"], 1, 1), i*100/Scan.getAllLoaded)
@@ -59,7 +62,6 @@ function Scan.ProcessGetAllScan(self)
 			for j=1, count do
 				tinsert(data[itemID].records, floor(buyout/count))
 			end
-			test = test + 1
 		end
 	end
 	
@@ -94,11 +96,67 @@ function Scan:GetAllScanQuery()
 	TSMAPI.Threading:Start(Scan.ProcessGetAllScan, 1, function() Scan:DoneScanning() end)
 end
 
+local function GroupScanCallback(event, ...)
+	if event == "QUERY_COMPLETE" then
+		local filterList = ...
+		local numItems = 0
+		for _, v in ipairs(filterList) do
+			numItems = numItems + #v.items
+		end
+		Scan.filterList = filterList
+		Scan.numFilters = #filterList
+		Scan:ScanNextGroupFilter()
+	elseif event == "QUERY_UPDATE" then
+		local current, total = ...
+		TSM.GUI:UpdateStatus(format("Preparing Filter %d / %d", current, total))
+	elseif event == "SCAN_INTERRUPTED" then
+		Scan:DoneScanning()
+	elseif event == "SCAN_TIMEOUT" then
+		tremove(Scan.filterList, 1)
+		Scan:ScanNextGroupFilter()
+	elseif event == "SCAN_PAGE_UPDATE" then
+		local page, total = ...
+		TSM.GUI:UpdateStatus(format("Scanning %d / %d (Page %d / %d)", Scan.numFilters-#Scan.filterList, Scan.numFilters, page+1, total), nil, page*100/total)
+	elseif event == "SCAN_COMPLETE" then
+		local data = ...
+		for _, itemString in ipairs(Scan.filterList[1].items) do
+			if not Scan.groupScanData[itemString] then
+				Scan.groupScanData[itemString] = data[itemString]
+			end
+		end
+		tremove(Scan.filterList, 1)
+		Scan:ScanNextGroupFilter()
+	end
+end
+
+function Scan:ScanNextGroupFilter(data)
+	if #Scan.filterList == 0 then
+		Scan:ProcessScanData(Scan.groupScanData)
+		Scan:DoneScanning()
+		return
+	end
+	TSM.GUI:UpdateStatus(format("Scanning %d / %d (Page %d / %d)", Scan.numFilters-#Scan.filterList, Scan.numFilters, 1, 1), (Scan.numFilters-#Scan.filterList)*100/Scan.numFilters)
+	TSMAPI.AuctionScan:RunQuery(Scan.filterList[1], GroupScanCallback)
+end
+
+function Scan:StartGroupScan(items)
+	Scan.isScanning = "Group"
+	Scan.isBuggedGetAll = nil
+	Scan.groupItems = items
+	wipe(Scan.filterList)
+	wipe(Scan.groupScanData)
+	Scan.numFilters = 0
+	TSMAPI.AuctionScan:StopScan()
+	TSMAPI:GenerateQueries(items, GroupScanCallback)
+	TSM.GUI:UpdateStatus("Preparing Filters...")
+end
+
 function Scan:StartFullScan()
 	Scan.isScanning = "Full"
-	
 	TSM.GUI:UpdateStatus(L["Running query..."])
 	Scan.isBuggedGetAll = nil
+	Scan.groupItems = nil
+	TSMAPI.AuctionScan:StopScan()
 	TSMAPI.AuctionScan:RunQuery({name=""}, ScanCallback)
 end
 
@@ -106,12 +164,9 @@ function Scan:StartGetAllScan()
 	TSM.db.profile.lastGetAll = time()
 	Scan.isScanning = "GetAll"
 	Scan.isBuggedGetAll = nil
+	Scan.groupItems = nil
 	TSMAPI.AuctionScan:StopScan()
 	Scan:GetAllScanQuery()
-end
-
-function Scan:IsScanning()
-	return Scan.isScanning
 end
 
 function Scan:DoneScanning()
@@ -142,8 +197,10 @@ function Scan:ProcessScanData(scanData)
 		end
 	end
 	
-	TSM.db.factionrealm.lastCompleteScan = time()
-	TSM.Data:ProcessData(data)
+	if Scan.isScanning ~= "group" then
+		TSM.db.factionrealm.lastCompleteScan = time()
+	end
+	TSM.Data:ProcessData(data, Scan.groupItems)
 end
 
 function Scan:ProcessImportedData(auctionData)
