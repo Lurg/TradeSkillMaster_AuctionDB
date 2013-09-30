@@ -175,8 +175,8 @@ function private:CreateStartScanContent(parent)
 	btn:SetPoint("TOPRIGHT", -6, -225)
 	btn:SetHeight(22)
 	btn:SetScript("OnClick", GUI.StartGroupScan)
-	btn:SetText("Scan Selected Groups")
-	btn.tooltip = "This will do a slow auction house scan of every item in the selected groups and update their AuctionDB prices. This may take several minutes."
+	btn:SetText(L["Scan Selected Groups"])
+	btn.tooltip = L["This will do a slow auction house scan of every item in the selected groups and update their AuctionDB prices. This may take several minutes."]
 	frame.startGroupScanButton = btn
 	
 	return frame

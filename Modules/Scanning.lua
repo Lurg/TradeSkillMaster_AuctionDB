@@ -108,7 +108,7 @@ local function GroupScanCallback(event, ...)
 		Scan:ScanNextGroupFilter()
 	elseif event == "QUERY_UPDATE" then
 		local current, total = ...
-		TSM.GUI:UpdateStatus(format("Preparing Filter %d / %d", current, total))
+		TSM.GUI:UpdateStatus(format(L["Preparing Filter %d / %d"], current, total))
 	elseif event == "SCAN_INTERRUPTED" then
 		Scan:DoneScanning()
 	elseif event == "SCAN_TIMEOUT" then
@@ -116,7 +116,7 @@ local function GroupScanCallback(event, ...)
 		Scan:ScanNextGroupFilter()
 	elseif event == "SCAN_PAGE_UPDATE" then
 		local page, total = ...
-		TSM.GUI:UpdateStatus(format("Scanning %d / %d (Page %d / %d)", Scan.numFilters-#Scan.filterList, Scan.numFilters, page+1, total), nil, page*100/total)
+		TSM.GUI:UpdateStatus(format(L["Scanning %d / %d (Page %d / %d)"], Scan.numFilters-#Scan.filterList, Scan.numFilters, page+1, total), nil, page*100/total)
 	elseif event == "SCAN_COMPLETE" then
 		local data = ...
 		for _, itemString in ipairs(Scan.filterList[1].items) do
@@ -135,7 +135,7 @@ function Scan:ScanNextGroupFilter(data)
 		Scan:DoneScanning()
 		return
 	end
-	TSM.GUI:UpdateStatus(format("Scanning %d / %d (Page %d / %d)", Scan.numFilters-#Scan.filterList, Scan.numFilters, 1, 1), (Scan.numFilters-#Scan.filterList)*100/Scan.numFilters)
+	TSM.GUI:UpdateStatus(format(L["Scanning %d / %d (Page %d / %d)"], Scan.numFilters-#Scan.filterList, Scan.numFilters, 1, 1), (Scan.numFilters-#Scan.filterList)*100/Scan.numFilters)
 	TSMAPI.AuctionScan:RunQuery(Scan.filterList[1], GroupScanCallback)
 end
 
@@ -148,7 +148,7 @@ function Scan:StartGroupScan(items)
 	Scan.numFilters = 0
 	TSMAPI.AuctionScan:StopScan()
 	TSMAPI:GenerateQueries(items, GroupScanCallback)
-	TSM.GUI:UpdateStatus("Preparing Filters...")
+	TSM.GUI:UpdateStatus(L["Preparing Filters..."])
 end
 
 function Scan:StartFullScan()
