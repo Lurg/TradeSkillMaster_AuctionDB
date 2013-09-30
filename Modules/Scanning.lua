@@ -90,7 +90,7 @@ end
 function Scan:GetAllScanQuery()
 	local canScan, canGetAll = CanSendAuctionQuery()
 	if not canGetAll then return TSM:Print(L["Can't run a GetAll scan right now."]) end
-	if not canScan then return TSMAPI:CreateTimeDelay("auctiondbGetAllStart", 0.5, Scan.GetAllScanQuery) end
+	if not canScan then return TSMAPI:CreateTimeDelay(0.5, Scan.GetAllScanQuery) end
 	QueryAuctionItems("", nil, nil, 0, 0, 0, 0, 0, 0, true)
 	Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 	TSMAPI.Threading:Start(Scan.ProcessGetAllScan, 1, function() Scan:DoneScanning() end)

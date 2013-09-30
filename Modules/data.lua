@@ -81,7 +81,7 @@ function Data:GetMarketValue(scans)
 end
 
 function Data:ProcessData(scanData, groupItems)
-	if TSM.processingData then return TSMAPI:CreateTimeDelay("adbAlreadyProcessing", 0.2, function() Data:ProcessData(scanData, groupItems) end) end
+	if TSM.processingData then return TSMAPI:CreateTimeDelay(0.2, function() Data:ProcessData(scanData, groupItems) end) end
 
 	local day = Data:GetDay()
 	-- wipe all the minBuyout data
