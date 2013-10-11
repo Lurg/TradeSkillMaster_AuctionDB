@@ -1,3 +1,8 @@
+v2.1
+*Improved the efficiency of the market value lookup code.
+*Fixed lua error with importing data from the TSM application.
+*Rearranged AuctionDB AH tab and added the ability to scan specific groups with AuctionDB.
+
 v2.0.2
 *Updated scrolling tables.
 *Fixed some 5.4 issues.
