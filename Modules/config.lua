@@ -133,7 +133,7 @@ function Config:LoadSearch(container)
 		if TSM.db.factionrealm.lastCompleteScan == TSM.db.factionrealm.appDataUpdate then
 			lastScanInfo = format(L["Last updated from the TSM Application %s ago."], SecondsToTime(time() - TSM.db.factionrealm.appDataUpdate))
 		else
-			lastScanInfo = format(L["Last updated from in-game scan %s ago."], SecondsToTime(time() - TSM.db.factionrealm.appDataUpdate))
+			lastScanInfo = format(L["Last updated from in-game scan %s ago."], SecondsToTime(time() - TSM.db.factionrealm.lastCompleteScan))
 		end
 	else
 		lastScanInfo = L["No scans found."]
