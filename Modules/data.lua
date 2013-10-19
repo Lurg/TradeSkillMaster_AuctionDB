@@ -109,6 +109,12 @@ function Data:ProcessData(scanData, groupItems)
 	local index = 1
 	local function DoDataProcessing()
 		for i = 1, 500 do
+			if index > #scanDataList then
+				TSMAPI:CancelFrame("adbProcessDelay")
+				TSM.processingData = nil
+				break
+			end
+			
 			local itemID, data = unpack(scanDataList[index])
 			TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0}
 			local marketValue = Data:CalculateMarketValue(data.records)
@@ -126,11 +132,6 @@ function Data:ProcessData(scanData, groupItems)
 			Data:UpdateMarketValue(TSM.data[itemID])
 			
 			index = index + 1
-			if index > #scanDataList then
-				TSMAPI:CancelFrame("adbProcessDelay")
-				TSM.processingData = nil
-				break
-			end
 		end
 	end
 	
