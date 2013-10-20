@@ -402,7 +402,7 @@ end
 function TSM:DecodeItemData(itemID, tbl)
 	tbl = tbl or TSM.data
 	local data = tbl[itemID]
-	if data and data.encoded then
+	if data and data.encoded and not data.marketValue then
 		local a, b, c, d, e, f = (","):split(data.encoded)
 		data.seen = decode(a)
 		data.marketValue = decode(b)
