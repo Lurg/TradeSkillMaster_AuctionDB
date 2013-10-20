@@ -48,6 +48,7 @@ function Config:UpdateItems()
 	local fSubClass = filter.subClass and select(filter.subClass, GetAuctionItemSubClasses(filter.class))
 	if filter.text or fClass then
 		for itemID, data in pairs(TSM.data) do
+			TSM:DecodeItemData(itemID)
 			local name, _, rarity, ilvl, minlvl, class, subClass = GetItemInfo(itemID)
 			if (name and filter.text and strfind(strlower(name), strlower(filter.text))) and (not fClass or (class == fClass and (not fSubClass or subClass == fSubClass))) and (not TSM.db.profile.hidePoorQualityItems or rarity > 0) then
 				tinsert(items, itemID)
@@ -344,7 +345,8 @@ function Config:GetSearchData()
 	if totalResults > 0 then
 		for i = minIndex, maxIndex do
 			local itemID = items[i]
-			local data = TSM.data[items[i]]
+			TSM:DecodeItemData(itemID)
+			local data = TSM.data[itemID]
 			local playerQuantity = TSMAPI:ModuleAPI("ItemTracker", "auctionstotal", "item:" .. itemID .. ":0:0:0:0:0:0")
 			local timeDiff = data.lastScan and SecondsToTime(time() - data.lastScan)
 			local name, link = GetItemInfo(itemID)
