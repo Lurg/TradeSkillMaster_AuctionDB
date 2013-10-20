@@ -1,3 +1,9 @@
+v2.2
+*Fixed potential error in scan processing code.
+*Fixed bug with the display of the last scan time.
+*Greatly reduced the time it takes AuctionDB to load / save its data (essentially to zero).
+*Added "Show AuctionDB AH Tab" option (enabled by default) to allow those who use the TSM app to hide the AuctionDB tab.
+
 v2.1
 *Improved the efficiency of the market value lookup code.
 *Fixed lua error with importing data from the TSM application.
