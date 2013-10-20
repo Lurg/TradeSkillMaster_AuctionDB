@@ -32,6 +32,7 @@ L["Download the FREE TSM desktop application which will automatically update you
 L["Enable display of AuctionDB data in tooltip."] = true
 L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM application for your scans is recommended."] = true
 L["Hide poor quality items"] = true
+L["If checked, AuctionDB will add a tab to the AH to allow for in-game scans. If you are using the TSM app exclusively for your scans, you may want to hide it by unchecking this option. This option requires a reload to take effect."] = true
 L["If checked, poor quality items won't be shown in the search results."] = true
 L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."] = true
 L["If checked, the market value of the item will be displayed"] = true
@@ -88,6 +89,7 @@ L["Seen Last Scan:"] = true
 L["Select how you would like the search results to be sorted. After changing this option, you may need to refresh your search results by hitting the \"Refresh\" button."] = true
 L["Select whether to sort search results in ascending or descending order."] = true
 L["Shift-Right-Click to clear all data for this item from AuctionDB."] = true
+L["Show AuctionDB AH Tab (Requires Reload)"] = true
 L["Sort items by"] = true
 L["This determines how many items are shown per page in results area of the \"Search\" tab of the AuctionDB page in the main TSM window. You may enter a number between 5 and 500 inclusive. If the page lags, you may want to decrease this number."] = true
 L["This will do a slow auction house scan of every item in the selected groups and update their AuctionDB prices. This may take several minutes."] = true

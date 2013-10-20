@@ -32,6 +32,7 @@ local savedDBDefaults = {
 		totalSeenTooltip = true,
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
+		showAHTab = true,
 	},
 }
 
@@ -79,7 +80,9 @@ function TSM:RegisterModule()
 	TSM.icons = {
 		{ side = "module", desc = "AuctionDB", slashCommand = "auctiondb", callback = "Config:Load", icon = "Interface\\Icons\\Inv_Misc_Platnumdisks" },
 	}
-	TSM.auctionTab = { callbackShow = "GUI:Show", callbackHide = "GUI:Hide" }
+	if TSM.db.profile.showAHTab then
+		TSM.auctionTab = { callbackShow = "GUI:Show", callbackHide = "GUI:Hide" }
+	end
 	TSM.slashCommands = {
 		{ key = "adbreset", label = L["Resets AuctionDB's scan data"], callback = "Reset" },
 	}
