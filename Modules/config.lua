@@ -506,14 +506,6 @@ function Config:LoadTooltipOptions(container)
 					settingInfo = { TSM.db.profile, "minBuyoutTooltip" },
 					tooltip = L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."],
 				},
-				{
-					type = "CheckBox",
-					label = "Display vendor value in tooltip.",
-					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "vendorTooltip" },
-					tooltip = "If checked, the value a vendor will buy the item for is displayed.",
-				},
 			},
 		},
 	}
