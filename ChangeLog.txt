@@ -1,3 +1,6 @@
+v2.2.1
+*Fixed bug with AuctionDB not saving data which was imported from the TSM app.
+
 v2.2
 *Fixed potential error in scan processing code.
 *Fixed bug with the display of the last scan time.
