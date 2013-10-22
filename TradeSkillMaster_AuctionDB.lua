@@ -157,6 +157,7 @@ function TSM:OnEnable()
 					TSM.data[itemID].minBuyout = minBuyout > 0 and minBuyout or nil
 				end
 				newItems[itemID] = true
+				TSM:EncodeItemData(itemID)
 			end
 		end
 
