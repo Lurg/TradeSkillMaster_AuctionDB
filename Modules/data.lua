@@ -92,7 +92,7 @@ function Data:ProcessData(scanData, groupItems)
 				TSM:DecodeItemData(itemID)
 				TSM.data[itemID].minBuyout = nil
 				TSM.data[itemID].currentQuantity = 0
-				TSM:EncodedItemData(itemID)
+				TSM:EncodeItemData(itemID)
 			end
 		end
 	else
@@ -100,7 +100,7 @@ function Data:ProcessData(scanData, groupItems)
 			TSM:DecodeItemData(itemID)
 			data.minBuyout = nil
 			data.currentQuantity = 0
-			TSM:EncodedItemData(itemID)
+			TSM:EncodeItemData(itemID)
 		end
 	end
 	
@@ -135,7 +135,7 @@ function Data:ProcessData(scanData, groupItems)
 			TSM.data[itemID].lastScan = TSM.db.factionrealm.lastCompleteScan
 			TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 			Data:UpdateMarketValue(TSM.data[itemID])
-			TSM:EncodedItemData(itemID)
+			TSM:EncodeItemData(itemID)
 			
 			index = index + 1
 		end

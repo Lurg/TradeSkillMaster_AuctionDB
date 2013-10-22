@@ -374,7 +374,7 @@ function TSM:Serialize()
 	for itemID, data in pairs(TSM.data) do
 		if not data.encoded then
 			-- should never get here, but just in-case
-			TSM:EncodedItemData(itemID)
+			TSM:EncodeItemData(itemID)
 		end
 		if data.encoded then
 			tinsert(results, "?" .. encode(itemID) .. "," .. data.encoded)
@@ -395,7 +395,7 @@ function TSM:Deserialize(data, resultTbl, fullyDecode)
 	end
 end
 
-function TSM:EncodedItemData(itemID, tbl)
+function TSM:EncodeItemData(itemID, tbl)
 	tbl = tbl or TSM.data
 	local data = tbl[itemID]
 	if data and data.marketValue then
