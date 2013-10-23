@@ -126,7 +126,7 @@ function private:CreateStartScanContent(parent)
 	container:SetPoint("TOPLEFT", 5, -35)
 	container:SetPoint("BOTTOMRIGHT", -205, 5)
 	TSMAPI.Design:SetFrameColor(container)
-	frame.groupTree = TSMAPI:CreateGroupTree(container, nil, nil, nil, "AuctionDB")
+	frame.groupTree = TSMAPI:CreateGroupTree(container, nil, "AuctionDB")
 	
 	local bar = TSMAPI.GUI:CreateVerticalLine(content, 0)
 	bar:ClearAllPoints()
