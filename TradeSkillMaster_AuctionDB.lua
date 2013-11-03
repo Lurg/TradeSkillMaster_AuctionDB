@@ -55,9 +55,23 @@ end
 
 function TSM:LoadAuctionData()
 	local function LoadDataThread(self, itemIDs)
-		local start = debugprofilestop()
+		local currentDay = TSM.Data:GetDay()
 		for i, itemID in ipairs(itemIDs) do
 			TSM:DecodeItemData(itemID)
+			if type(TSM.data[itemID].scans) == "table" then
+				local temp = {}
+				temp[currentDay] = TSM.data[itemID].scans[currentDay]
+				for i=1, 14 do
+					local dayScans = TSM.data[itemID].scans[currentDay-i]
+					if type(dayScans) == "table" then
+						temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+					elseif type(dayScans) == "number" then
+						temp[currentDay-i] = dayScans
+					end
+				end
+				TSM.data[itemID].scans = temp
+			end
+			TSM:EncodeItemData(itemID)
 			self:Yield()
 		end
 	end
@@ -188,7 +202,6 @@ function TSM:GetTooltip(itemString, quantity)
 	if not itemID or not TSM.data[itemID] then return end
 	local text = {}
 	local moneyCoinsTooltip = TSMAPI:GetMoneyCoinsTooltip()
-
 
 	-- add total seen count info
 	if TSM.db.profile.totalSeenTooltip then
