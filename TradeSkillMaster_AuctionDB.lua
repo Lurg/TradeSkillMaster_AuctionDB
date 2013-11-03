@@ -17,6 +17,7 @@ local SECONDS_PER_DAY = 60 * 60 * 24
 
 local savedDBDefaults = {
 	factionrealm = {
+		appData = {},
 		scanData = "",
 		time = 0,
 		lastCompleteScan = 0,
@@ -48,41 +49,11 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	TSM:LoadAuctionData()
 	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
-end
-
-function TSM:LoadAuctionData()
-	local function LoadDataThread(self, itemIDs)
-		local currentDay = TSM.Data:GetDay()
-		for i, itemID in ipairs(itemIDs) do
-			TSM:DecodeItemData(itemID)
-			if type(TSM.data[itemID].scans) == "table" then
-				local temp = {}
-				temp[currentDay] = TSM.data[itemID].scans[currentDay]
-				for i=1, 14 do
-					local dayScans = TSM.data[itemID].scans[currentDay-i]
-					if type(dayScans) == "table" then
-						temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
-					elseif type(dayScans) == "number" then
-						temp[currentDay-i] = dayScans
-					end
-				end
-				TSM.data[itemID].scans = temp
-			end
-			TSM:EncodeItemData(itemID)
-			self:Yield()
-		end
-	end
 	
 	TSM.data = {}
 	TSM:Deserialize(TSM.db.factionrealm.scanData, TSM.data)
-	local itemIDs = {}
-	for itemID in pairs(TSM.data) do
-		tinsert(itemIDs, itemID)
-	end
-	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -111,6 +82,77 @@ function TSM:RegisterModule()
 	TSMAPI:NewModule(TSM)
 end
 
+function TSM:LoadAuctionData()
+	local function LoadDataThread(self, itemIDs)
+		-- process new items first
+		for itemID in pairs(TSM.db.factionrealm.appData) do
+			if not TSM.data[itemID] then
+				TSM:DecodeItemData(itemID)
+				TSM:ProcessAppData(itemID)
+				TSM:EncodeItemData(itemID)
+			end
+			self:Yield()
+		end
+		
+		local currentDay = TSM.Data:GetDay()
+		for i, itemID in ipairs(itemIDs) do
+			TSM:DecodeItemData(itemID)
+			TSM:ProcessAppData(itemID)
+			if type(TSM.data[itemID].scans) == "table" then
+				local temp = {}
+				temp[currentDay] = TSM.data[itemID].scans[currentDay]
+				for i=1, 14 do
+					local dayScans = TSM.data[itemID].scans[currentDay-i]
+					if type(dayScans) == "table" then
+						temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+					elseif type(dayScans) == "number" then
+						temp[currentDay-i] = dayScans
+					end
+				end
+				TSM.data[itemID].scans = temp
+			end
+			TSM:EncodeItemData(itemID)
+			self:Yield()
+		end
+	end
+	
+	local itemIDs = {}
+	for itemID in pairs(TSM.data) do
+		tinsert(itemIDs, itemID)
+	end
+	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
+end
+
+function TSM:ProcessAppData(itemID)
+	if not TSM.db.factionrealm.appData[itemID] then return end
+	
+	TSM.data[itemID] = TSM.data[itemID] or { scans = {}, seen = 0, lastScan = 0 }
+	local dbData = TSM.data[itemID]
+	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
+		local marketValue, minBuyout, num, scanTime = appData.m, appData.b, appData.n, appData.t
+		local day = TSM.Data:GetDay(scanTime)
+
+		if type(dbData.scans[day]) == "number" then
+			dbData.scans[day] = { dbData.scans[day] }
+		end
+		dbData.scans[day] = dbData.scans[day] or {}
+		tinsert(dbData.scans[day], marketValue)
+		if day ~= TSM.Data:GetDay() then
+			dbData.scans[day] = TSM.Data:GetAverage(dbData.scans[day])
+		end
+
+		dbData.seen = ((dbData.seen or 0) + num)
+
+		if not dbData.lastScan or dbData.lastScan < scanTime then
+			dbData.currentQuantity = num
+			dbData.lastScan = scanTime
+			dbData.minBuyout = minBuyout > 0 and minBuyout or nil
+		end
+	end
+	TSM.Data:UpdateMarketValue(dbData)
+	TSM.db.factionrealm.appData[itemID] = nil
+end
+
 function TSM:OnEnable()
 	local function DecodeJSON(data)
 		data = gsub(data, ":", "=")
@@ -130,9 +172,8 @@ function TSM:OnEnable()
 		local realm = strlower(GetRealmName() or "")
 		local faction = strlower(UnitFactionGroup("player") or "")
 		if faction == "" or faction == "Neutral" then return end
-		local newData = {}
 		local numNewScans = 0
-		for realmInfo, data in pairs(TSM.AppData) do
+		for realmInfo, appScanData in pairs(TSM.AppData) do
 			local r, f, t, extra = ("-"):split(realmInfo)
 			if extra then
 				r = r .. "-" .. f
@@ -141,42 +182,23 @@ function TSM:OnEnable()
 			end
 			r = strlower(r)
 			f = strlower(f)
-			if realm == r and (faction == f or f == "both") and tonumber(t) > TSM.db.factionrealm.appDataUpdate then
-				newData[tonumber(t)] = DecodeJSON(data)
+			local scanTime = tonumber(t)
+			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate then
+				local importData = DecodeJSON(appScanData)[faction]
+				for itemID, data in pairs(importData) do
+					itemID = tonumber(itemID)
+					data.m = tonumber(data.m)
+					data.b = tonumber(data.b)
+					data.n = tonumber(data.n)
+					data.t = scanTime
+					if itemID and data.m and data.b and data.n then
+						TSM.db.factionrealm.appData[itemID] = TSM.db.factionrealm.appData[itemID] or {}
+						tinsert(TSM.db.factionrealm.appData[itemID], data)
+					end
+				end
+				TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, scanTime)
 				numNewScans = numNewScans + 1
 			end
-		end
-
-		local newItems = {}
-		for epochTime, realmData in pairs(newData) do
-			TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, epochTime)
-			local day = TSM.Data:GetDay(epochTime)
-			for itemID, data in pairs(realmData[faction] or {}) do
-				itemID = tonumber(itemID)
-				TSM:DecodeItemData(itemID)
-				TSM.data[itemID] = TSM.data[itemID] or { scans = {}, seen = 0, lastScan = 0 }
-				local marketValue, minBuyout, num = tonumber(data.m), tonumber(data.b), tonumber(data.n)
-
-				if type(TSM.data[itemID].scans[day]) == "number" then
-					TSM.data[itemID].scans[day] = { TSM.data[itemID].scans[day] }
-				end
-				TSM.data[itemID].scans[day] = TSM.data[itemID].scans[day] or {}
-				tinsert(TSM.data[itemID].scans[day], marketValue)
-
-				TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + num)
-
-				if not TSM.data[itemID].lastScan or TSM.data[itemID].lastScan < epochTime then
-					TSM.data[itemID].currentQuantity = num
-					TSM.data[itemID].lastScan = epochTime
-					TSM.data[itemID].minBuyout = minBuyout > 0 and minBuyout or nil
-				end
-				newItems[itemID] = true
-				TSM:EncodeItemData(itemID)
-			end
-		end
-
-		for itemID in pairs(newItems) do
-			TSM.Data:UpdateMarketValue(TSM.data[itemID])
 		end
 
 		if numNewScans > 0 then
@@ -184,10 +206,10 @@ function TSM:OnEnable()
 			TSM:Printf(L["Imported %s scans worth of new auction data!"], numNewScans)
 		end
 
-		wipe(TSM.AppData)
 		TSM.AppData = nil
-		collectgarbage()
 	end
+	
+	TSM:LoadAuctionData()
 end
 
 function TSM:OnDisable()
