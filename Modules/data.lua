@@ -17,6 +17,24 @@ local MIN_PERCENTILE = 0.15 -- consider at least the lowest 15% of auctions
 local MAX_PERCENTILE = 0.30 -- consider at most the lowest 30% of auctions
 local MAX_JUMP = 1.2 -- between the min and max percentiles, any increase in price over 120% will trigger a discard of remaining auctions
 
+function Data:ConvertScansToAvg(scans)
+	if not scans then return end
+	-- do a sanity check
+	if type(scans) == "number" then
+		scans = {scans}
+	end
+	if not scans.avg then
+		local total, num = 0, 0
+		for _, value in ipairs(scans) do
+			total = total + value
+			num = num + 1
+		end
+		scans.avg = floor(total/num+0.5)
+		scans.count = num
+	end
+	return scans
+end
+
 function Data:GetDay(t)
 	t = t or time()
 	return floor(t / (60*60*24))
@@ -32,7 +50,12 @@ function Data:UpdateMarketValue(itemData)
 	for i=1, 14 do
 		local dayScans = scans[day-i]
 		if type(dayScans) == "table" then
-			itemData.scans[day-i] = Data:GetAverage(dayScans)
+			if dayScans.avg then
+				itemData.scans[day-i] = dayScans.avg
+			else
+				-- old method
+				itemData.scans[day-i] = Data:GetAverage(dayScans)
+			end
 		elseif dayScans then
 			itemData.scans[day-i] = dayScans
 		end
@@ -41,6 +64,7 @@ function Data:UpdateMarketValue(itemData)
 end
 
 -- gets the average of a list of numbers
+-- DEPRECATED
 function Data:GetAverage(data)
 	local total, num = 0, 0
 	for _, marketValue in ipairs(data) do
@@ -61,7 +85,12 @@ function Data:GetMarketValue(scans)
 		if data then
 			local dayMarketValue
 			if type(data) == "table" then
-				dayMarketValue = Data:GetAverage(data)
+				if dayScans.avg then
+					dayMarketValue = dayScans.avg
+				else
+					-- old method
+					dayMarketValue = Data:GetAverage(data)
+				end
 			else
 				dayMarketValue = data
 			end
@@ -124,11 +153,19 @@ function Data:ProcessData(scanData, groupItems)
 			TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0}
 			local marketValue = Data:CalculateMarketValue(data.records)
 			
-			if type(TSM.data[itemID].scans[day]) == "number" then
-				TSM.data[itemID].scans[day] = {TSM.data[itemID].scans[day]}
+			local scanData = TSM.data[itemID].scans
+			scanData[day] = scanData[day] or {avg=0, count=0}
+			if type(scanData[day]) == "number" then
+				-- this should never happen...
+				scanData[day] = {scanData[day]}
 			end
-			TSM.data[itemID].scans[day] = TSM.data[itemID].scans[day] or {}
-			tinsert(TSM.data[itemID].scans[day], marketValue)
+			scanData[day].avg = scanData[day].avg or 0
+			scanData[day].count = scanData[day].count or 0
+			if #scanData[day] > 0 then
+				scanData[day] = Data:ConvertScansToAvg(scanData[day])
+			end
+			scanData[day].avg = (scanData[day].avg * scanData[day].count + marketValue) / (scanData[day].count + 1)
+			scanData[day].count = scanData[day].count + 1
 			
 			TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + data.quantity)
 			TSM.data[itemID].currentQuantity = data.quantity

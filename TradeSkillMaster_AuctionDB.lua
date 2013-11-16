@@ -95,16 +95,21 @@ function TSM:LoadAuctionData()
 		end
 		
 		local currentDay = TSM.Data:GetDay()
-		for i, itemID in ipairs(itemIDs) do
+		for _, itemID in ipairs(itemIDs) do
 			TSM:DecodeItemData(itemID)
 			TSM:ProcessAppData(itemID)
 			if type(TSM.data[itemID].scans) == "table" then
 				local temp = {}
-				temp[currentDay] = TSM.data[itemID].scans[currentDay]
+				temp[currentDay] = TSM.Data:ConvertScansToAvg(TSM.data[itemID].scans[currentDay])
 				for i=1, 14 do
 					local dayScans = TSM.data[itemID].scans[currentDay-i]
 					if type(dayScans) == "table" then
-						temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+						if dayScans.avg then
+							temp[currentDay-i] = dayScans.avg
+						else
+							-- old method
+							temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+						end
 					elseif type(dayScans) == "number" then
 						temp[currentDay-i] = dayScans
 					end
@@ -128,25 +133,31 @@ function TSM:ProcessAppData(itemID)
 	
 	TSM.data[itemID] = TSM.data[itemID] or { scans = {}, seen = 0, lastScan = 0 }
 	local dbData = TSM.data[itemID]
+	local day = TSM.Data:GetDay()
 	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
 		local marketValue, minBuyout, num, scanTime = appData.m, appData.b, appData.n, appData.t
-		local day = TSM.Data:GetDay(scanTime)
+		if day == TSM.Data:GetDay(scanTime) then
+			local dayScans = dbData.scans
+			dayScans[day] = dayScans[day] or {avg=0, count=0}
+			if type(dayScans[day]) == "number" then
+				-- this should never happen...
+				dayScans[day] = {dayScans[day]}
+			end
+			dayScans[day].avg = dayScans[day].avg or 0
+			dayScans[day].count = dayScans[day].count or 0
+			if #dayScans[day] > 0 then
+				dayScans[day] = TSM.Data:ConvertScansToAvg(dayScans[day])
+			end
+			dayScans[day].avg = (dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1)
+			dayScans[day].count = dayScans[day].count + 1
 
-		if type(dbData.scans[day]) == "number" then
-			dbData.scans[day] = { dbData.scans[day] }
-		end
-		dbData.scans[day] = dbData.scans[day] or {}
-		tinsert(dbData.scans[day], marketValue)
-		if day ~= TSM.Data:GetDay() then
-			dbData.scans[day] = TSM.Data:GetAverage(dbData.scans[day])
-		end
+			dbData.seen = ((dbData.seen or 0) + num)
 
-		dbData.seen = ((dbData.seen or 0) + num)
-
-		if not dbData.lastScan or dbData.lastScan < scanTime then
-			dbData.currentQuantity = num
-			dbData.lastScan = scanTime
-			dbData.minBuyout = minBuyout > 0 and minBuyout or nil
+			if not dbData.lastScan or dbData.lastScan < scanTime then
+				dbData.currentQuantity = num
+				dbData.lastScan = scanTime
+				dbData.minBuyout = minBuyout > 0 and minBuyout or nil
+			end
 		end
 	end
 	TSM.Data:UpdateMarketValue(dbData)
@@ -369,9 +380,11 @@ end
 
 local function encodeScans(scans)
 	local tbl, tbl2 = {}, {}
-
 	for day, data in pairs(scans) do
-		if type(data) == "table" then
+		if type(data) == "table" and data.count and data.avg then
+			data = encode(data.avg).."@"..encode(data.count)
+		elseif type(data) == "table" then
+			-- Old method of encoding scans
 			for i = 1, #data do
 				tbl2[i] = encode(data[i])
 			end
@@ -381,22 +394,40 @@ local function encodeScans(scans)
 		end
 		tinsert(tbl, encode(day) .. ":" .. data)
 	end
-
 	return table.concat(tbl, "!")
 end
 
 local function decodeScans(rope)
 	if rope == "A" then return	end
 	local scans = {}
-	local days = { ("!"):split(rope) }
+	local days = {("!"):split(rope)}
+	local currentDay = TSM.Data:GetDay()
 	for _, data in ipairs(days) do
 		local day, marketValueData = (":"):split(data)
 		day = decode(day)
 		scans[day] = {}
-		for _, value in ipairs({ (";"):split(marketValueData) }) do
-			local decodedValue = decode(value)
-			if decodedValue ~= "~" then
-				tinsert(scans[day], tonumber(decodedValue))
+		if strfind(marketValueData, "@") then
+			local avg, count = ("@"):split(marketValueData)
+			avg = decode(avg)
+			count = decode(count)
+			if avg ~= "~" and count ~= "~" then
+				if day == currentDay then
+					scans[day].avg = avg
+					scans[day].count = count
+				else
+					scans[day] = avg
+				end
+			end
+		else
+			-- Old method of decoding scans
+			for _, value in ipairs({(";"):split(marketValueData)}) do
+				local decodedValue = decode(value)
+				if decodedValue ~= "~" then
+					tinsert(scans[day], tonumber(decodedValue))
+				end
+			end
+			if day ~= currentDay then
+				scans[day] = TSM.Data:GetAverage(scans[day])
 			end
 		end
 	end
@@ -405,7 +436,7 @@ local function decodeScans(rope)
 end
 
 function TSM:Serialize()
-	local results, scans = {}, nil
+	local results = {}
 	for itemID, data in pairs(TSM.data) do
 		if not data.encoded then
 			-- should never get here, but just in-case
