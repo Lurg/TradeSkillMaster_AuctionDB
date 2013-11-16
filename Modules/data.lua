@@ -164,7 +164,7 @@ function Data:ProcessData(scanData, groupItems)
 			if #scanData[day] > 0 then
 				scanData[day] = Data:ConvertScansToAvg(scanData[day])
 			end
-			scanData[day].avg = (scanData[day].avg * scanData[day].count + marketValue) / (scanData[day].count + 1)
+			scanData[day].avg = floor((scanData[day].avg * scanData[day].count + marketValue) / (scanData[day].count + 1) + 0.5)
 			scanData[day].count = scanData[day].count + 1
 			
 			TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + data.quantity)

@@ -148,7 +148,7 @@ function TSM:ProcessAppData(itemID)
 			if #dayScans[day] > 0 then
 				dayScans[day] = TSM.Data:ConvertScansToAvg(dayScans[day])
 			end
-			dayScans[day].avg = (dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1)
+			dayScans[day].avg = floor((dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1) + 0.5)
 			dayScans[day].count = dayScans[day].count + 1
 
 			dbData.seen = ((dbData.seen or 0) + num)
@@ -408,6 +408,8 @@ local function decodeScans(rope)
 		scans[day] = {}
 		if strfind(marketValueData, "@") then
 			local avg, count = ("@"):split(marketValueData)
+			avg = tonumber(avg)
+			avg = avg and floor(avg + 0.5)
 			avg = decode(avg)
 			count = decode(count)
 			if avg ~= "~" and count ~= "~" then
