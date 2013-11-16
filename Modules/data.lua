@@ -79,17 +79,17 @@ end
 function Data:GetMarketValue(scans)
 	local day = Data:GetDay()
 	local totalAmount, totalWeight = 0, 0
-	
+
 	for i=0, 14 do
-		local data = scans[day-i]
-		if data then
+		local dayScans = scans[day-i]
+		if dayScans then
 			local dayMarketValue
-			if type(data) == "table" then
+			if type(dayScans) == "table" then
 				if dayScans.avg then
 					dayMarketValue = dayScans.avg
 				else
 					-- old method
-					dayMarketValue = Data:GetAverage(data)
+					dayMarketValue = Data:GetAverage(scans)
 				end
 			else
 				dayMarketValue = data
