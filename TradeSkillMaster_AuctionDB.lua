@@ -408,8 +408,6 @@ local function decodeScans(rope)
 		scans[day] = {}
 		if strfind(marketValueData, "@") then
 			local avg, count = ("@"):split(marketValueData)
-			avg = tonumber(avg)
-			avg = avg and floor(avg + 0.5)
 			avg = decode(avg)
 			count = decode(count)
 			if avg ~= "~" and count ~= "~" then
