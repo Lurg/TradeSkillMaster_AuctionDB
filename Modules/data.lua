@@ -92,7 +92,7 @@ function Data:GetMarketValue(scans)
 					dayMarketValue = Data:GetAverage(scans)
 				end
 			else
-				dayMarketValue = data
+				dayMarketValue = dayScans
 			end
 			if dayMarketValue then
 				totalAmount = totalAmount + (WEIGHTS[i] * dayMarketValue)
