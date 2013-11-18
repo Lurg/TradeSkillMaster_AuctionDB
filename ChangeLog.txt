@@ -1,3 +1,9 @@
+v2.3
+*Added code to clear out old, unused scan data from the database to save space.
+*Importing data from the app will now happen in the background rather than when AuctionDB is loaded.
+*Changed how the current day's scans are being stored to be more efficient.
+*Many other general efficiency improvements with how AuctionDB manages its data.
+
 v2.2.3
 *Updated group tree creation API call.
 
