@@ -29,8 +29,6 @@ local savedDBDefaults = {
 		resultsSortOrder = "ascending",
 		resultsSortMethod = "name",
 		hidePoorQualityItems = true,
-		seenTooltip = true,
-		totalSeenTooltip = true,
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
 		showAHTab = true,
@@ -72,7 +70,6 @@ function TSM:RegisterModule()
 		{ key = "adbreset", label = L["Resets AuctionDB's scan data"], callback = "Reset" },
 	}
 	TSM.moduleAPIs = {
-		{ key = "seenCount", callback = TSM.GetSeenCount },
 		{ key = "lastCompleteScan", callback = TSM.GetLastCompleteScan },
 		{ key = "lastCompleteScanTime", callback = TSM.GetLastCompleteScanTime },
 		{ key = "adbScans", callback = TSM.GetScans },
@@ -131,7 +128,7 @@ end
 function TSM:ProcessAppData(itemID)
 	if not TSM.db.factionrealm.appData[itemID] then return end
 	
-	TSM.data[itemID] = TSM.data[itemID] or { scans = {}, seen = 0, lastScan = 0 }
+	TSM.data[itemID] = TSM.data[itemID] or {scans = {}, lastScan = 0}
 	local dbData = TSM.data[itemID]
 	local day = TSM.Data:GetDay()
 	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
@@ -151,10 +148,7 @@ function TSM:ProcessAppData(itemID)
 			dayScans[day].avg = floor((dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1) + 0.5)
 			dayScans[day].count = dayScans[day].count + 1
 
-			dbData.seen = ((dbData.seen or 0) + num)
-
 			if not dbData.lastScan or dbData.lastScan < scanTime then
-				dbData.currentQuantity = num
 				dbData.lastScan = scanTime
 				dbData.minBuyout = minBuyout > 0 and minBuyout or nil
 			end
@@ -235,26 +229,7 @@ function TSM:GetTooltip(itemString, quantity)
 	if not itemID or not TSM.data[itemID] then return end
 	local text = {}
 	local moneyCoinsTooltip = TSMAPI:GetMoneyCoinsTooltip()
-
-	-- add total seen count info
-	if TSM.db.profile.totalSeenTooltip then
-		local totalSeen = TSM:GetSeenCount(itemID)
-		if totalSeen then
-			tinsert(text, { left = "  " .. L["Total Seen Count:"], right = "|cffffffff" .. totalSeen })
-		end
-	end
-
-	-- add current quantity info
-	if TSM.db.profile.seenTooltip then
-		local currQuantity = TSM:GetCurrentQuantity(itemID)
-		if currQuantity and currQuantity > 0 then
-			tinsert(text, { left = "  " .. L["Seen Last Scan:"], right = "|cffffffff" .. currQuantity })
-		end
-	end
-
-	if not quantity then
-		quantity = 1
-	end
+	quantity = quantity or 1
 
 	-- add market value info
 	if TSM.db.profile.marketValueTooltip then
@@ -465,7 +440,7 @@ function TSM:EncodeItemData(itemID, tbl)
 	tbl = tbl or TSM.data
 	local data = tbl[itemID]
 	if data and data.marketValue then
-		data.encoded = strjoin(",", encode(data.seen), encode(data.marketValue), encode(data.lastScan), encode(data.currentQuantity or 0), encode(data.minBuyout), encodeScans(data.scans))
+		data.encoded = strjoin(",", encode(0), encode(data.marketValue), encode(data.lastScan), encode(0), encode(data.minBuyout), encodeScans(data.scans))
 	end
 end
 
@@ -474,10 +449,8 @@ function TSM:DecodeItemData(itemID, tbl)
 	local data = tbl[itemID]
 	if data and data.encoded and not data.marketValue then
 		local a, b, c, d, e, f = (","):split(data.encoded)
-		data.seen = decode(a)
 		data.marketValue = decode(b)
 		data.lastScan = decode(c)
-		data.currentQuantity = (decode(d) or 0)
 		data.minBuyout = decode(e)
 		data.scans = decodeScans(f)
 	end
@@ -541,23 +514,9 @@ function TSM:GetMarketValue(itemID)
 	return TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
 end
 
-function TSM:GetSeenCount(itemID)
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	TSM:DecodeItemData(itemID)
-	return TSM.data[itemID].seen
-end
-
 function TSM:GetLastScanTime(itemID)
 	TSM:DecodeItemData(itemID)
 	return itemID and TSM.data[itemID].lastScan
-end
-
-function TSM:GetCurrentQuantity(itemID)
-	TSM:DecodeItemData(itemID)
-	return itemID and TSM.data[itemID].currentQuantity
 end
 
 function TSM:GetMinBuyout(itemID)

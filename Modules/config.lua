@@ -285,23 +285,19 @@ function Config:LoadSearch(container)
 		local stCols = {
 			{
 				name = L["Item Link"],
-				width = 0.38,
-			},
-			{
-				name = L["Num(Yours)"],
-				width = 0.1,
+				width = 0.40,
 			},
 			{
 				name = L["Minimum Buyout"],
-				width = 0.15,
+				width = 0.19,
 			},
 			{
 				name = L["Market Value"],
-				width = 0.15,
+				width = 0.19,
 			},
 			{
 				name = L["Last Scanned"],
-				width = 0.21,
+				width = 0.22,
 			},
 		}
 		local handlers = {
@@ -347,7 +343,6 @@ function Config:GetSearchData()
 			local itemID = items[i]
 			TSM:DecodeItemData(itemID)
 			local data = TSM.data[itemID]
-			local playerQuantity = TSMAPI:ModuleAPI("ItemTracker", "auctionstotal", "item:" .. itemID .. ":0:0:0:0:0:0")
 			local timeDiff = data.lastScan and SecondsToTime(time() - data.lastScan)
 			local name, link = GetItemInfo(itemID)
 			tinsert(stData, {
@@ -355,10 +350,6 @@ function Config:GetSearchData()
 					{
 						value = link or "???",
 						sortArg = name or "",
-					},
-					{
-						value = data.currentQuantity .. (playerQuantity and " |cffffbb00(" .. playerQuantity .. ")|r" or ""),
-						sortArg = data.currentQuantity,
 					},
 					{
 						value = TSMAPI:FormatTextMoney(data.minBuyout, "|cffffffff") or "---",
@@ -478,21 +469,6 @@ function Config:LoadTooltipOptions(container)
 				},
 				{
 					type = "CheckBox",
-					label = L["Display total number of items ever seen in tooltip."],
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "totalSeenTooltip" },
-					tooltip = L["If checked, the total number of items ever seen will be displayed."],
-				},
-				{
-					type = "CheckBox",
-					label = L["Display number of items seen in the last scan in tooltip."],
-					relativeWidth = 0.49,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "seenTooltip" },
-					tooltip = L["If checked, the number of items seen in the last scan will be displayed."],
-				},
-				{
-					type = "CheckBox",
 					label = L["Display market value in tooltip."],
 					disabled = not TSM.db.profile.tooltip,
 					settingInfo = { TSM.db.profile, "marketValueTooltip" },
@@ -501,7 +477,6 @@ function Config:LoadTooltipOptions(container)
 				{
 					type = "CheckBox",
 					label = L["Display lowest buyout value seen in the last scan in tooltip."],
-					relativeWidth = 0.49,
 					disabled = not TSM.db.profile.tooltip,
 					settingInfo = { TSM.db.profile, "minBuyoutTooltip" },
 					tooltip = L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."],

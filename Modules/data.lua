@@ -120,7 +120,6 @@ function Data:ProcessData(scanData, groupItems)
 			if TSM.data[itemID] then
 				TSM:DecodeItemData(itemID)
 				TSM.data[itemID].minBuyout = nil
-				TSM.data[itemID].currentQuantity = 0
 				TSM:EncodeItemData(itemID)
 			end
 		end
@@ -128,7 +127,6 @@ function Data:ProcessData(scanData, groupItems)
 		for itemID, data in pairs(TSM.data) do
 			TSM:DecodeItemData(itemID)
 			data.minBuyout = nil
-			data.currentQuantity = 0
 			TSM:EncodeItemData(itemID)
 		end
 	end
@@ -150,7 +148,7 @@ function Data:ProcessData(scanData, groupItems)
 			
 			local itemID, data = unpack(scanDataList[index])
 			TSM:DecodeItemData(itemID)
-			TSM.data[itemID] = TSM.data[itemID] or {scans={}, seen=0}
+			TSM.data[itemID] = TSM.data[itemID] or {scans={}, lastScan = 0}
 			local marketValue = Data:CalculateMarketValue(data.records)
 			
 			local scanData = TSM.data[itemID].scans
@@ -167,8 +165,6 @@ function Data:ProcessData(scanData, groupItems)
 			scanData[day].avg = floor((scanData[day].avg * scanData[day].count + marketValue) / (scanData[day].count + 1) + 0.5)
 			scanData[day].count = scanData[day].count + 1
 			
-			TSM.data[itemID].seen = ((TSM.data[itemID].seen or 0) + data.quantity)
-			TSM.data[itemID].currentQuantity = data.quantity
 			TSM.data[itemID].lastScan = TSM.db.factionrealm.lastCompleteScan
 			TSM.data[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 			Data:UpdateMarketValue(TSM.data[itemID])
