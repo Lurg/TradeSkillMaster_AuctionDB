@@ -177,7 +177,7 @@ function Config:LoadSearch(container)
 					value = filter.class or #classes,
 					relativeWidth = 0.25,
 					callback = function(self, _, value)
-						filter.text = filter.text or ""
+						filter.text = TSMAPI:StrEscape(filter.text or "")
 						if value ~= filter.class then
 							filter.subClass = nil
 						end
