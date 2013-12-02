@@ -178,6 +178,7 @@ function TSM:OnEnable()
 		local faction = strlower(UnitFactionGroup("player") or "")
 		if faction == "" or faction == "Neutral" then return end
 		local numNewScans = 0
+		local maxScanTime = 0
 		for realmInfo, appScanData in pairs(TSM.AppData) do
 			local r, f, t, extra = ("-"):split(realmInfo)
 			if extra then
@@ -201,12 +202,13 @@ function TSM:OnEnable()
 						tinsert(TSM.db.factionrealm.appData[itemID], data)
 					end
 				end
-				TSM.db.factionrealm.appDataUpdate = max(TSM.db.factionrealm.appDataUpdate, scanTime)
+				maxScanTime = max(maxScanTime, scanTime)
 				numNewScans = numNewScans + 1
 			end
 		end
 
 		if numNewScans > 0 then
+			TSM.db.factionrealm.appDataUpdate = maxScanTime
 			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
 			TSM:Printf(L["Imported %s scans worth of new auction data!"], numNewScans)
 		end
