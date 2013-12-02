@@ -1,3 +1,8 @@
+v2.3.1
+*Removed seen quantities which were not being used and are no longer supported by the TSM app.
+*Fixed bug with importing multiple scans worth of data from the TSM app.
+*Fixed bug with search of AuctionDB database not escaping special characters properly.
+
 v2.3
 *Added code to clear out old, unused scan data from the database to save space.
 *Importing data from the app will now happen in the background rather than when AuctionDB is loaded.
