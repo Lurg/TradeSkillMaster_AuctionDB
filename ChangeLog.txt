@@ -1,3 +1,6 @@
+v2.3.3
+*Fixed possible lua error with previous version.
+
 v2.3.2
 *Fixed another bug with importing data from the TSM app.
 
