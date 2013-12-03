@@ -1,3 +1,6 @@
+v2.3.2
+*Fixed another bug with importing data from the TSM app.
+
 v2.3.1
 *Removed seen quantities which were not being used and are no longer supported by the TSM app.
 *Fixed bug with importing multiple scans worth of data from the TSM app.
