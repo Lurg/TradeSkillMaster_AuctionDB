@@ -132,7 +132,7 @@ function TSM:ProcessAppData(itemID)
 	local dbData = TSM.data[itemID]
 	local day = TSM.Data:GetDay()
 	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
-		local marketValue, minBuyout, num, scanTime = appData.m, appData.b, appData.n, appData.t
+		local marketValue, minBuyout, scanTime = appData.m, appData.b, appData.t
 		if day == TSM.Data:GetDay(scanTime) then
 			local dayScans = dbData.scans
 			dayScans[day] = dayScans[day] or {avg=0, count=0}
@@ -147,7 +147,6 @@ function TSM:ProcessAppData(itemID)
 			end
 			dayScans[day].avg = floor((dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1) + 0.5)
 			dayScans[day].count = dayScans[day].count + 1
-
 			if not dbData.lastScan or dbData.lastScan < scanTime then
 				dbData.lastScan = scanTime
 				dbData.minBuyout = minBuyout > 0 and minBuyout or nil
@@ -165,7 +164,6 @@ function TSM:OnEnable()
 		data = gsub(data, "\"alliance\"", "alliance")
 		data = gsub(data, "\"m\"", "m")
 		data = gsub(data, "\"b\"", "b")
-		data = gsub(data, "\"n\"", "n")
 		data = gsub(data, "\"([0-9]+)\"", "[%1]")
 		loadstring("TSM_APP_DATA_TMP = " .. data .. "")()
 		local val = TSM_APP_DATA_TMP
@@ -195,9 +193,8 @@ function TSM:OnEnable()
 					itemID = tonumber(itemID)
 					data.m = tonumber(data.m)
 					data.b = tonumber(data.b)
-					data.n = tonumber(data.n)
 					data.t = scanTime
-					if itemID and data.m and data.b and data.n then
+					if itemID and data.m and data.b then
 						TSM.db.factionrealm.appData[itemID] = TSM.db.factionrealm.appData[itemID] or {}
 						tinsert(TSM.db.factionrealm.appData[itemID], data)
 					end
@@ -215,7 +212,7 @@ function TSM:OnEnable()
 
 		TSM.AppData = nil
 	end
-	
+
 	TSM:LoadAuctionData()
 end
 
