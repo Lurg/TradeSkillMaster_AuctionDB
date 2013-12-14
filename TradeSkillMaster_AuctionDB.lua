@@ -190,18 +190,20 @@ function TSM:OnEnable()
 			local scanTime = tonumber(t)
 			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate then
 				local importData = DecodeJSON(appScanData)[faction]
-				for itemID, data in pairs(importData) do
-					itemID = tonumber(itemID)
-					data.m = tonumber(data.m)
-					data.b = tonumber(data.b)
-					data.t = scanTime
-					if itemID and data.m and data.b then
-						TSM.db.factionrealm.appData[itemID] = TSM.db.factionrealm.appData[itemID] or {}
-						tinsert(TSM.db.factionrealm.appData[itemID], data)
+				if importData then
+					for itemID, data in pairs(importData) do
+						itemID = tonumber(itemID)
+						data.m = tonumber(data.m)
+						data.b = tonumber(data.b)
+						data.t = scanTime
+						if itemID and data.m and data.b then
+							TSM.db.factionrealm.appData[itemID] = TSM.db.factionrealm.appData[itemID] or {}
+							tinsert(TSM.db.factionrealm.appData[itemID], data)
+						end
 					end
+					maxScanTime = max(maxScanTime, scanTime)
+					numNewScans = numNewScans + 1
 				end
-				maxScanTime = max(maxScanTime, scanTime)
-				numNewScans = numNewScans + 1
 			end
 		end
 
