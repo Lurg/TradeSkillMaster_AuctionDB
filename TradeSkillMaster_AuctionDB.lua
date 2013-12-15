@@ -188,7 +188,7 @@ function TSM:OnEnable()
 			r = strlower(r)
 			f = strlower(f)
 			local scanTime = tonumber(t)
-			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate then
+			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate and TSM.Data:GetDay(scanTime) == TSM.Data:GetDay() then
 				local importData = DecodeJSON(appScanData)[faction]
 				if importData then
 					for itemID, data in pairs(importData) do
