@@ -302,6 +302,8 @@ function TSM:Reset()
 		whileDead = true,
 		hideOnEscape = true,
 		OnAccept = function()
+			TSM.db.factionrealm.lastCompleteScan = 0
+			TSM.db.factionrealm.appDataUpdate = 0
 			for i in pairs(TSM.data) do
 				TSM.data[i] = nil
 			end
