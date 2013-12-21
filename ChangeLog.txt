@@ -1,3 +1,6 @@
+v2.3.4
+*AuctionDB will now import up to 48 hours of scan data, instead of 24.
+
 v2.3.3
 *Fixed possible lua error with previous version.
 
