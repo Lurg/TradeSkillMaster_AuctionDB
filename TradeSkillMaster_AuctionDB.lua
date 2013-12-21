@@ -13,6 +13,7 @@ local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
 
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
+TSM.MAX_AVG_DAY = 0
 local SECONDS_PER_DAY = 60 * 60 * 24
 
 local savedDBDefaults = {
@@ -97,18 +98,21 @@ function TSM:LoadAuctionData()
 			TSM:ProcessAppData(itemID)
 			if type(TSM.data[itemID].scans) == "table" then
 				local temp = {}
-				temp[currentDay] = TSM.Data:ConvertScansToAvg(TSM.data[itemID].scans[currentDay])
-				for i=1, 14 do
-					local dayScans = TSM.data[itemID].scans[currentDay-i]
-					if type(dayScans) == "table" then
-						if dayScans.avg then
-							temp[currentDay-i] = dayScans.avg
-						else
-							-- old method
-							temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+				for i=0, 14 do
+					if i <= TSM.MAX_AVG_DAY then
+						temp[currentDay-i] = TSM.Data:ConvertScansToAvg(TSM.data[itemID].scans[currentDay-i])
+					else
+						local dayScans = TSM.data[itemID].scans[currentDay-i]
+						if type(dayScans) == "table" then
+							if dayScans.avg then
+								temp[currentDay-i] = dayScans.avg
+							else
+								-- old method
+								temp[currentDay-i] = TSM.Data:GetAverage(dayScans)
+							end
+						elseif type(dayScans) == "number" then
+							temp[currentDay-i] = dayScans
 						end
-					elseif type(dayScans) == "number" then
-						temp[currentDay-i] = dayScans
 					end
 				end
 				TSM.data[itemID].scans = temp
@@ -133,7 +137,7 @@ function TSM:ProcessAppData(itemID)
 	local day = TSM.Data:GetDay()
 	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
 		local marketValue, minBuyout, scanTime = appData.m, appData.b, appData.t
-		if day == TSM.Data:GetDay(scanTime) then
+		if abs(day - TSM.Data:GetDay(scanTime)) <= TSM.MAX_AVG_DAY then
 			local dayScans = dbData.scans
 			dayScans[day] = dayScans[day] or {avg=0, count=0}
 			if type(dayScans[day]) == "number" then
@@ -188,7 +192,7 @@ function TSM:OnEnable()
 			r = strlower(r)
 			f = strlower(f)
 			local scanTime = tonumber(t)
-			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate and TSM.Data:GetDay(scanTime) == TSM.Data:GetDay() then
+			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate and abs(TSM.Data:GetDay() - TSM.Data:GetDay(scanTime)) <= TSM.MAX_AVG_DAY then
 				local importData = DecodeJSON(appScanData)[faction]
 				if importData then
 					for itemID, data in pairs(importData) do
@@ -388,7 +392,7 @@ local function decodeScans(rope)
 			avg = decode(avg)
 			count = decode(count)
 			if avg ~= "~" and count ~= "~" then
-				if day == currentDay then
+				if abs(currentDay - day) <= TSM.MAX_AVG_DAY then
 					scans[day].avg = avg
 					scans[day].count = count
 				else

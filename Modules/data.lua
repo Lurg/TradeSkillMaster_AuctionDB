@@ -46,18 +46,21 @@ function Data:UpdateMarketValue(itemData)
 
 	local scans = CopyTable(itemData.scans)
 	itemData.scans = {}
-	itemData.scans[day] = scans[day] and CopyTable(scans[day])
-	for i=1, 14 do
-		local dayScans = scans[day-i]
-		if type(dayScans) == "table" then
-			if dayScans.avg then
-				itemData.scans[day-i] = dayScans.avg
-			else
-				-- old method
-				itemData.scans[day-i] = Data:GetAverage(dayScans)
+	for i=0, 14 do
+		if i <= TSM.MAX_AVG_DAY then
+			itemData.scans[day-i] = scans[day] and CopyTable(scans[day-i])
+		else
+			local dayScans = scans[day-i]
+			if type(dayScans) == "table" then
+				if dayScans.avg then
+					itemData.scans[day-i] = dayScans.avg
+				else
+					-- old method
+					itemData.scans[day-i] = Data:GetAverage(dayScans)
+				end
+			elseif dayScans then
+				itemData.scans[day-i] = dayScans
 			end
-		elseif dayScans then
-			itemData.scans[day-i] = dayScans
 		end
 	end
 	itemData.marketValue = Data:GetMarketValue(itemData.scans)
@@ -112,7 +115,6 @@ end
 function Data:ProcessData(scanData, groupItems)
 	if TSM.processingData then return TSMAPI:CreateTimeDelay(0.2, function() Data:ProcessData(scanData, groupItems) end) end
 
-	local day = Data:GetDay()
 	-- wipe all the minBuyout data
 	if groupItems then
 		for itemString in pairs(groupItems) do
@@ -138,6 +140,7 @@ function Data:ProcessData(scanData, groupItems)
 	
 	-- go through each item and figure out the market value / update the data table
 	local index = 1
+	local day = Data:GetDay()
 	local function DoDataProcessing()
 		for i = 1, 500 do
 			if index > #scanDataList then
