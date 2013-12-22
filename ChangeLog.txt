@@ -1,3 +1,6 @@
+v2.3.8
+*Re-applied reverted change.
+
 v2.3.7
 *Reverted previous change temporarily.
 
