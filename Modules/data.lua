@@ -48,7 +48,10 @@ function Data:UpdateMarketValue(itemData)
 	itemData.scans = {}
 	for i=0, 14 do
 		if i <= TSM.MAX_AVG_DAY then
-			itemData.scans[day-i] = scans[day] and CopyTable(scans[day-i])
+			if type(scans[day-i]) == "number" then
+				scans[day-i] = {avg=scans[day-i], count=1}
+			end
+			itemData.scans[day-i] = scans[day-i] and CopyTable(scans[day-i])
 		else
 			local dayScans = scans[day-i]
 			if type(dayScans) == "table" then

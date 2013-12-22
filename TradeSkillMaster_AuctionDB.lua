@@ -13,7 +13,7 @@ local AceGUI = LibStub("AceGUI-3.0") -- load the AceGUI libraries
 
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
-TSM.MAX_AVG_DAY = 0
+TSM.MAX_AVG_DAY = 1
 local SECONDS_PER_DAY = 60 * 60 * 24
 
 local savedDBDefaults = {
