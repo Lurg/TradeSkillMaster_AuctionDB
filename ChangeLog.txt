@@ -1,3 +1,6 @@
+v2.3.7
+*Reverted previous change temporarily.
+
 v2.3.6
 *Fixed bug with v2.3.4 change not taking effect.
 
