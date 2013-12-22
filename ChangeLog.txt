@@ -1,3 +1,6 @@
+v2.3.6
+*Fixed bug with v2.3.4 change not taking effect.
+
 v2.3.5
 *Typing "/tsm adbreset" will now reset update times as well as the data.
 
