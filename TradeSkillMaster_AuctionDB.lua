@@ -48,7 +48,6 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	TSM:RegisterEvent("PLAYER_LOGOUT", TSM.OnDisable)
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 	
 	TSM.data = {}
@@ -223,7 +222,7 @@ function TSM:OnEnable()
 	TSM:LoadAuctionData()
 end
 
-function TSM:OnDisable()
+function TSM:OnTSMDBShutdown()
 	TSM.db.factionrealm.time = 0
 	TSM:Serialize(TSM.data)
 end
