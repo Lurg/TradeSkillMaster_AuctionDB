@@ -303,7 +303,7 @@ function Config:LoadSearch(container)
 		local handlers = {
 			OnClick = function(_, data, _, button)
 				if data and IsShiftKeyDown() and button == "RightButton" then
-					TSM.data[data.itemID] = nil
+					TSM.scanData[data.itemID] = nil
 					TSM:Printf(L["Removed %s from AuctionDB."], select(2, GetItemInfo(data.itemID)) or data.itemID)
 				end
 			end,
@@ -480,6 +480,13 @@ function Config:LoadTooltipOptions(container)
 					disabled = not TSM.db.profile.tooltip,
 					settingInfo = { TSM.db.profile, "minBuyoutTooltip" },
 					tooltip = L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."],
+				},
+				{
+					type = "CheckBox",
+					label = L["Display global market value (via TSM Application) in the tooltip."],
+					disabled = not TSM.db.profile.tooltip,
+					settingInfo = { TSM.db.profile, "globalMarketValueTooltip" },
+					tooltip = L["If checked, the global market value of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 			},
 		},

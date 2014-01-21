@@ -32,6 +32,7 @@ local savedDBDefaults = {
 		hidePoorQualityItems = true,
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
+		globalMarketValueTooltip = true,
 		showAHTab = true,
 	},
 }
@@ -50,8 +51,9 @@ function TSM:OnInitialize()
 	TSM:RegisterModule()
 	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 	
-	TSM.data = {}
-	TSM:Deserialize(TSM.db.factionrealm.scanData, TSM.data)
+	TSM.scanData = {}
+	TSM.data = TSM.scanData
+	TSM:Deserialize(TSM.db.factionrealm.scanData, TSM.scanData)
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -59,6 +61,7 @@ function TSM:RegisterModule()
 	TSM.priceSources = {
 		{ key = "DBMarket", label = L["AuctionDB - Market Value"], callback = "GetMarketValue" },
 		{ key = "DBMinBuyout", label = L["AuctionDB - Minimum Buyout"], callback = "GetMinBuyout" },
+		{ key = "GlobalDBMarket", label = L["AuctionDB - Global Market Value (via TSM App)"], callback = "GetGlobalMarketValue" },
 	}
 	TSM.icons = {
 		{ side = "module", desc = "AuctionDB", slashCommand = "auctiondb", callback = "Config:Load", icon = "Interface\\Icons\\Inv_Misc_Platnumdisks" },
@@ -83,7 +86,7 @@ function TSM:LoadAuctionData()
 	local function LoadDataThread(self, itemIDs)
 		-- process new items first
 		for itemID in pairs(TSM.db.factionrealm.appData) do
-			if not TSM.data[itemID] then
+			if not TSM.scanData[itemID] then
 				TSM:DecodeItemData(itemID)
 				TSM:ProcessAppData(itemID)
 				TSM:EncodeItemData(itemID)
@@ -95,13 +98,13 @@ function TSM:LoadAuctionData()
 		for _, itemID in ipairs(itemIDs) do
 			TSM:DecodeItemData(itemID)
 			TSM:ProcessAppData(itemID)
-			if type(TSM.data[itemID].scans) == "table" then
+			if type(TSM.scanData[itemID].scans) == "table" then
 				local temp = {}
 				for i=0, 14 do
 					if i <= TSM.MAX_AVG_DAY then
-						temp[currentDay-i] = TSM.Data:ConvertScansToAvg(TSM.data[itemID].scans[currentDay-i])
+						temp[currentDay-i] = TSM.Data:ConvertScansToAvg(TSM.scanData[itemID].scans[currentDay-i])
 					else
-						local dayScans = TSM.data[itemID].scans[currentDay-i]
+						local dayScans = TSM.scanData[itemID].scans[currentDay-i]
 						if type(dayScans) == "table" then
 							if dayScans.avg then
 								temp[currentDay-i] = dayScans.avg
@@ -114,7 +117,7 @@ function TSM:LoadAuctionData()
 						end
 					end
 				end
-				TSM.data[itemID].scans = temp
+				TSM.scanData[itemID].scans = temp
 			end
 			TSM:EncodeItemData(itemID)
 			self:Yield()
@@ -122,7 +125,7 @@ function TSM:LoadAuctionData()
 	end
 	
 	local itemIDs = {}
-	for itemID in pairs(TSM.data) do
+	for itemID in pairs(TSM.scanData) do
 		tinsert(itemIDs, itemID)
 	end
 	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
@@ -131,8 +134,8 @@ end
 function TSM:ProcessAppData(itemID)
 	if not TSM.db.factionrealm.appData[itemID] then return end
 	
-	TSM.data[itemID] = TSM.data[itemID] or {scans = {}, lastScan = 0}
-	local dbData = TSM.data[itemID]
+	TSM.scanData[itemID] = TSM.scanData[itemID] or {scans = {}, lastScan = 0}
+	local dbData = TSM.scanData[itemID]
 	local day = TSM.Data:GetDay()
 	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
 		local marketValue, minBuyout, scanTime = appData.m, appData.b, appData.t
@@ -175,7 +178,58 @@ function TSM:OnEnable()
 		return val
 	end
 
-	if TSM.AppData then
+	if TSM.AppData2 then
+		local factionrealm = (GetRealmName() or "").."-"..(UnitFactionGroup("player") or "")
+		if TSM.AppData2[factionrealm] then
+			TSM.db.factionrealm.appDataUpdate = TSM.AppData2[factionrealm].downloadTime
+			TSM.db.factionrealm.lastCompleteScan = TSM.AppData2[factionrealm].downloadTime
+			local fields = TSM.AppData2[factionrealm].fields
+			TSM.appData = {}
+			for _, data in ipairs(TSM.AppData2[factionrealm].data) do
+				local temp = {}
+				local itemID
+				for i, key in ipairs(fields) do
+					if key == "itemID" then
+						itemID = data[i]
+					else
+						temp[key] = data[i]
+					end
+				end
+				if itemID then
+					TSM.appData[itemID] = temp
+				else
+					error("Invalid import data.")
+				end
+			end
+			TSM.data = TSM.appData
+		end
+		if TSM.AppData2.global then
+			local fields = TSM.AppData2.global.fields
+			TSM.appData = TSM.appData or {}
+			for _, data in ipairs(TSM.AppData2.global.data) do
+				local temp = {}
+				local itemID
+				for i, key in ipairs(fields) do
+					if key == "itemID" then
+						itemID = data[i]
+					else
+						temp[key] = data[i]
+					end
+				end
+				if itemID then
+					TSM.appData[itemID] = TSM.appData[itemID] or {}
+					for key, value in pairs(temp) do
+						TSM.appData[itemID][key] = value
+					end
+				else
+					error("Invalid import data.")
+				end
+			end
+			TSM.data = TSM.appData
+		end
+		TSM.AppData2 = nil
+	end
+	if TSM.AppData and not TSM.appData then
 		local realm = strlower(GetRealmName() or "")
 		local faction = strlower(UnitFactionGroup("player") or "")
 		if faction == "" or faction == "Neutral" then return end
@@ -217,14 +271,13 @@ function TSM:OnEnable()
 		end
 
 		TSM.AppData = nil
+		TSM:LoadAuctionData()
 	end
-
-	TSM:LoadAuctionData()
 end
 
 function TSM:OnTSMDBShutdown()
 	TSM.db.factionrealm.time = 0
-	TSM:Serialize(TSM.data)
+	TSM:Serialize(TSM.scanData)
 end
 
 function TSM:GetTooltip(itemString, quantity)
@@ -240,20 +293,20 @@ function TSM:GetTooltip(itemString, quantity)
 	if TSM.db.profile.marketValueTooltip then
 		local marketValue = TSM:GetMarketValue(itemID)
 		if marketValue then
-				if moneyCoinsTooltip then
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(marketValue * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoneyIcon(marketValue, "|cffffffff", true) })
-					end
+			if moneyCoinsTooltip then
+				if IsShiftKeyDown() then
+					tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(marketValue * quantity, "|cffffffff", true) })
 				else
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoney(marketValue * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoney(marketValue, "|cffffffff", true) })
-					end
+					tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoneyIcon(marketValue, "|cffffffff", true) })
+				end
+			else
+				if IsShiftKeyDown() then
+					tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoney(marketValue * quantity, "|cffffffff", true) })
+				else
+					tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoney(marketValue, "|cffffffff", true) })
 				end
 			end
+		end
 	end
 
 	-- add min buyout info
@@ -272,6 +325,28 @@ function TSM:GetTooltip(itemString, quantity)
 						tinsert(text, { left = "  " .. format(L["Min Buyout x%s:"], quantity), right = TSMAPI:FormatTextMoney(minBuyout * quantity, "|cffffffff", true) })
 					else
 						tinsert(text, { left = "  " .. L["Min Buyout:"], right = TSMAPI:FormatTextMoney(minBuyout, "|cffffffff", true) })
+					end
+				end
+			end
+		end
+	end
+
+	-- global market value info
+	if TSM.db.profile.globalMarketValueTooltip then
+		local globalMarketValue = TSM:GetGlobalMarketValue(itemID)
+		if globalMarketValue then
+			if quantity then
+				if moneyCoinsTooltip then
+					if IsShiftKeyDown() then
+						tinsert(text, { left = "  " .. format(L["Global Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(globalMarketValue * quantity, "|cffffffff", true) })
+					else
+						tinsert(text, { left = "  " .. L["Global Market Value:"], right = TSMAPI:FormatTextMoneyIcon(globalMarketValue, "|cffffffff", true) })
+					end
+				else
+					if IsShiftKeyDown() then
+						tinsert(text, { left = "  " .. format(L["Global Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoney(globalMarketValue * quantity, "|cffffffff", true) })
+					else
+						tinsert(text, { left = "  " .. L["Global Market Value:"], right = TSMAPI:FormatTextMoney(globalMarketValue, "|cffffffff", true) })
 					end
 				end
 			end
@@ -301,10 +376,10 @@ function TSM:Reset()
 		whileDead = true,
 		hideOnEscape = true,
 		OnAccept = function()
-			TSM.db.factionrealm.lastCompleteScan = 0
-			TSM.db.factionrealm.appDataUpdate = 0
-			for i in pairs(TSM.data) do
-				TSM.data[i] = nil
+			TSM.db.factionrealm.appDataUpdate = TSM.db.factionrealm.appDataUpdate or 0
+			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
+			for i in pairs(TSM.scanData) do
+				TSM.scanData[i] = nil
 			end
 			TSM:Print(L["Reset Data"])
 		end,
@@ -419,7 +494,7 @@ end
 
 function TSM:Serialize()
 	local results = {}
-	for itemID, data in pairs(TSM.data) do
+	for itemID, data in pairs(TSM.scanData) do
 		if not data.encoded then
 			-- should never get here, but just in-case
 			TSM:EncodeItemData(itemID)
@@ -444,7 +519,7 @@ function TSM:Deserialize(data, resultTbl, fullyDecode)
 end
 
 function TSM:EncodeItemData(itemID, tbl)
-	tbl = tbl or TSM.data
+	tbl = tbl or TSM.scanData
 	local data = tbl[itemID]
 	if data and data.marketValue then
 		data.encoded = strjoin(",", encode(0), encode(data.marketValue), encode(data.lastScan), encode(0), encode(data.minBuyout), encodeScans(data.scans))
@@ -452,7 +527,7 @@ function TSM:EncodeItemData(itemID, tbl)
 end
 
 function TSM:DecodeItemData(itemID, tbl)
-	tbl = tbl or TSM.data
+	tbl = tbl or TSM.scanData
 	local data = tbl[itemID]
 	if data and data.encoded and not data.marketValue then
 		local a, b, c, d, e, f = (","):split(data.encoded)
@@ -466,8 +541,10 @@ end
 function TSM:GetLastCompleteScan()
 	local lastScan = {}
 	for itemID, data in pairs(TSM.data) do
-		TSM:DecodeItemData(itemID)
-		if data.lastScan == TSM.db.factionrealm.lastCompleteScan then
+		if TSM.data == TSM.scanData then
+			TSM:DecodeItemData(itemID)
+		end
+		if data.lastScan == TSM.db.factionrealm.lastCompleteScan or (not data.lastScan and data.minBuyout) then
 			lastScan[itemID] = { marketValue = data.marketValue, minBuyout = data.minBuyout }
 		end
 	end
@@ -484,10 +561,10 @@ function TSM:GetScans(link)
 	link = select(2, GetItemInfo(link))
 	if not link then return	end
 	local itemID = TSMAPI:GetItemID(link)
-	if not TSM.data[itemID] then return	end
+	if not TSM.scanData[itemID] then return	end
 	TSM:DecodeItemData(itemID)
 
-	return CopyTable(TSM.data[itemID].scans)
+	return CopyTable(TSM.scanData[itemID].scans)
 end
 
 function TSM:GetOppositeFactionData()
@@ -514,16 +591,31 @@ function TSM:GetMarketValue(itemID)
 		itemID = TSMAPI:GetItemID(itemID)
 	end
 	if not itemID or not TSM.data[itemID] then return end
-	TSM:DecodeItemData(itemID)
-	if not TSM.data[itemID].marketValue or TSM.data[itemID].marketValue == 0 then
-		TSM.data[itemID].marketValue = TSM.Data:GetMarketValue(TSM.data[itemID].scans)
+	if TSM.data == TSM.scanData then
+		TSM:DecodeItemData(itemID)
+		if not TSM.scanData[itemID].marketValue or TSM.scanData[itemID].marketValue == 0 then
+			TSM.scanData[itemID].marketValue = TSM.Data:GetMarketValue(TSM.scanData[itemID].scans)
+		end
 	end
 	return TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
 end
 
+function TSM:GetGlobalMarketValue(itemID)
+	if TSM.data == TSM.scanData then return end
+	if itemID and not tonumber(itemID) then
+		itemID = TSMAPI:GetItemID(itemID)
+	end
+	if not itemID or not TSM.data[itemID] then return end
+	return TSM.data[itemID].globalMarketValue ~= 0 and TSM.data[itemID].globalMarketValue or nil
+end
+
 function TSM:GetLastScanTime(itemID)
-	TSM:DecodeItemData(itemID)
-	return itemID and TSM.data[itemID].lastScan
+	if TSM.data == TSM.scanData then
+		TSM:DecodeItemData(itemID)
+		return itemID and TSM.scanData[itemID].lastScan
+	else
+		return TSM.db.factionrealm.appDataUpdate
+	end
 end
 
 function TSM:GetMinBuyout(itemID)
@@ -531,6 +623,9 @@ function TSM:GetMinBuyout(itemID)
 		itemID = TSMAPI:GetItemID(itemID)
 	end
 	if not itemID or not TSM.data[itemID] then return end
-	TSM:DecodeItemData(itemID)
-	return TSM.data[itemID].minBuyout
+	if TSM.data == TSM.scanData then
+		TSM:DecodeItemData(itemID)
+	end
+	local minBuyout = TSM.data[itemID].minBuyout
+	return minBuyout and minBuyout > 0 and minBuyout or nil
 end
