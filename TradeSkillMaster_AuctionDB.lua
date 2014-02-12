@@ -16,30 +16,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- lo
 TSM.MAX_AVG_DAY = 1
 local SECONDS_PER_DAY = 60 * 60 * 24
 
-local savedDBDefaults = {
-	factionrealm = {
-		appData = {},
-		scanData = "",
-		time = 0,
-		lastCompleteScan = 0,
-		appDataUpdate = 0,
-	},
-	profile = {
-		tooltip = true,
-		resultsPerPage = 50,
-		resultsSortOrder = "ascending",
-		resultsSortMethod = "name",
-		hidePoorQualityItems = true,
-		marketValueTooltip = true,
-		minBuyoutTooltip = true,
-		globalMarketValueAvgTooltip = true,
-		globalMarketValueMedianTooltip = true,
-		globalMinBuyoutAvgTooltip = true,
-		globalMinBuyoutMedianTooltip = true,
-		showAHTab = true,
-	},
-}
-
 TSM.GLOBAL_PRICE_INFO = {
 	{
 		source = "DBGlobalMarketAvg",
@@ -72,6 +48,30 @@ TSM.GLOBAL_PRICE_INFO = {
 		tooltipText = L["Global Min Buyout Median:"],
 		tooltipText2 = L["Global Min Buyout Median x%s:"],
 		tooltipKey = "globalMinBuyoutMedianTooltip",
+	},
+}
+
+local savedDBDefaults = {
+	factionrealm = {
+		appData = {},
+		scanData = "",
+		time = 0,
+		lastCompleteScan = 0,
+		appDataUpdate = 0,
+	},
+	profile = {
+		tooltip = true,
+		resultsPerPage = 50,
+		resultsSortOrder = "ascending",
+		resultsSortMethod = "name",
+		hidePoorQualityItems = true,
+		marketValueTooltip = true,
+		minBuyoutTooltip = true,
+		globalMarketValueAvgTooltip = true,
+		globalMarketValueMedianTooltip = true,
+		globalMinBuyoutAvgTooltip = true,
+		globalMinBuyoutMedianTooltip = true,
+		showAHTab = true,
 	},
 }
 
