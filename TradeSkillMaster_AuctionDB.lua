@@ -32,8 +32,46 @@ local savedDBDefaults = {
 		hidePoorQualityItems = true,
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
-		globalMarketValueTooltip = true,
+		globalMarketValueAvgTooltip = true,
+		globalMarketValueMedianTooltip = true,
+		globalMinBuyoutAvgTooltip = true,
+		globalMinBuyoutMedianTooltip = true,
 		showAHTab = true,
+	},
+}
+
+TSM.GLOBAL_PRICE_INFO = {
+	{
+		source = "DBGlobalMarketAvg",
+		sourceLabel = L["AuctionDB - Global Market Value Average (via TSM App)"],
+		sourceArg = "globalMarketValue",
+		tooltipText = L["Global Market Value Avg:"],
+		tooltipText2 = L["Global Market Value Avg x%s:"],
+		tooltipKey = "globalMarketValueAvgTooltip",
+	},
+	{
+		source = "DBGlobalMarketMedian",
+		sourceLabel = L["AuctionDB - Global Market Value Median (via TSM App)"],
+		sourceArg = "globalMarketValueMedian",
+		tooltipText = L["Global Market Value Median:"],
+		tooltipText2 = L["Global Market Value Median x%s:"],
+		tooltipKey = "globalMarketValueMedianTooltip",
+	},
+	{
+		source = "DBGlobalMinBuyoutAvg",
+		sourceLabel = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"],
+		sourceArg = "globalMinBuyout",
+		tooltipText = L["Global Min Buyout Avg:"],
+		tooltipText2 = L["Global Min Buyout Avg x%s:"],
+		tooltipKey = "globalMinBuyoutAvgTooltip",
+	},
+	{
+		source = "DBGlobalMinBuyoutMedian",
+		sourceLabel = L["AuctionDB - Global Minimum Buyout Median (via TSM App)"],
+		sourceArg = "globalMinBuyoutMedian",
+		tooltipText = L["Global Min Buyout Median:"],
+		tooltipText2 = L["Global Min Buyout Median x%s:"],
+		tooltipKey = "globalMinBuyoutMedianTooltip",
 	},
 }
 
@@ -61,8 +99,10 @@ function TSM:RegisterModule()
 	TSM.priceSources = {
 		{ key = "DBMarket", label = L["AuctionDB - Market Value"], callback = "GetMarketValue" },
 		{ key = "DBMinBuyout", label = L["AuctionDB - Minimum Buyout"], callback = "GetMinBuyout" },
-		{ key = "GlobalDBMarket", label = L["AuctionDB - Global Market Value (via TSM App)"], callback = "GetGlobalMarketValue" },
 	}
+	for _, info in pairs(TSM.GLOBAL_PRICE_INFO) do
+		tinsert(TSM.priceSources, {key=info.source, label=info.sourceLabel, callback="GetGlobalPrice", arg=info.sourceArg})
+	end
 	TSM.icons = {
 		{ side = "module", desc = "AuctionDB", slashCommand = "auctiondb", callback = "Config:Load", icon = "Interface\\Icons\\Inv_Misc_Platnumdisks" },
 	}
@@ -288,68 +328,38 @@ function TSM:GetTooltip(itemString, quantity)
 	local text = {}
 	local moneyCoinsTooltip = TSMAPI:GetMoneyCoinsTooltip()
 	quantity = quantity or 1
-
-	-- add market value info
-	if TSM.db.profile.marketValueTooltip then
-		local marketValue = TSM:GetMarketValue(itemID)
-		if marketValue then
-			if moneyCoinsTooltip then
-				if IsShiftKeyDown() then
-					tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(marketValue * quantity, "|cffffffff", true) })
-				else
-					tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoneyIcon(marketValue, "|cffffffff", true) })
-				end
+	
+	local function InsertValueText(str, strAlt, value)
+		if not value then return end
+		if moneyCoinsTooltip then
+			if IsShiftKeyDown() then
+				tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoneyIcon(value * quantity, "|cffffffff", true) })
 			else
-				if IsShiftKeyDown() then
-					tinsert(text, { left = "  " .. format(L["Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoney(marketValue * quantity, "|cffffffff", true) })
-				else
-					tinsert(text, { left = "  " .. L["Market Value:"], right = TSMAPI:FormatTextMoney(marketValue, "|cffffffff", true) })
-				end
+				tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoneyIcon(value, "|cffffffff", true) })
+			end
+		else
+			if IsShiftKeyDown() then
+				tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoney(value * quantity, "|cffffffff", true) })
+			else
+				tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoney(value, "|cffffffff", true) })
 			end
 		end
+	end
+	
+	-- add market value info
+	if TSM.db.profile.marketValueTooltip then
+		InsertValueText(L["Market Value:"], L["Market Value x%s:"], TSM:GetMarketValue(itemID))
 	end
 
 	-- add min buyout info
 	if TSM.db.profile.minBuyoutTooltip then
-		local minBuyout = TSM:GetMinBuyout(itemID)
-		if minBuyout then
-			if quantity then
-				if moneyCoinsTooltip then
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Min Buyout x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(minBuyout * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Min Buyout:"], right = TSMAPI:FormatTextMoneyIcon(minBuyout, "|cffffffff", true) })
-					end
-				else
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Min Buyout x%s:"], quantity), right = TSMAPI:FormatTextMoney(minBuyout * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Min Buyout:"], right = TSMAPI:FormatTextMoney(minBuyout, "|cffffffff", true) })
-					end
-				end
-			end
-		end
+		InsertValueText(L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemID))
 	end
 
-	-- global market value info
-	if TSM.db.profile.globalMarketValueTooltip then
-		local globalMarketValue = TSM:GetGlobalMarketValue(itemID)
-		if globalMarketValue then
-			if quantity then
-				if moneyCoinsTooltip then
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Global Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoneyIcon(globalMarketValue * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Global Market Value:"], right = TSMAPI:FormatTextMoneyIcon(globalMarketValue, "|cffffffff", true) })
-					end
-				else
-					if IsShiftKeyDown() then
-						tinsert(text, { left = "  " .. format(L["Global Market Value x%s:"], quantity), right = TSMAPI:FormatTextMoney(globalMarketValue * quantity, "|cffffffff", true) })
-					else
-						tinsert(text, { left = "  " .. L["Global Market Value:"], right = TSMAPI:FormatTextMoney(globalMarketValue, "|cffffffff", true) })
-					end
-				end
-			end
+	-- add global price info
+	for _, info in ipairs(TSM.GLOBAL_PRICE_INFO) do
+		if TSM.db.profile[info.tooltipKey] then
+			InsertValueText(info.tooltipText, info.tooltipText2, TSM:GetGlobalPrice(itemID, info.sourceArg))
 		end
 	end
 
@@ -600,13 +610,13 @@ function TSM:GetMarketValue(itemID)
 	return TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
 end
 
-function TSM:GetGlobalMarketValue(itemID)
+function TSM:GetGlobalPrice(itemID, key)
 	if TSM.data == TSM.scanData then return end
 	if itemID and not tonumber(itemID) then
 		itemID = TSMAPI:GetItemID(itemID)
 	end
 	if not itemID or not TSM.data[itemID] then return end
-	return TSM.data[itemID].globalMarketValue ~= 0 and TSM.data[itemID].globalMarketValue or nil
+	return TSM.data[itemID][key] and TSM.data[itemID][key] ~= 0 and TSM.data[itemID][key] or nil
 end
 
 function TSM:GetLastScanTime(itemID)
