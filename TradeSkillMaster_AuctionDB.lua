@@ -49,6 +49,14 @@ TSM.GLOBAL_PRICE_INFO = {
 		tooltipText2 = L["Global Min Buyout Median x%s:"],
 		tooltipKey = "globalMinBuyoutMedianTooltip",
 	},
+	{
+		source = "DBGlobalSaleAvg",
+		sourceLabel = L["AuctionDB - Global Sale Average (via TSM App)"],
+		sourceArg = "globalSale",
+		tooltipText = L["Global Sale Average:"],
+		tooltipText2 = L["Global Sale Average x%s:"],
+		tooltipKey = "globalSaleAvgTooltip",
+	},
 }
 
 local savedDBDefaults = {
@@ -71,6 +79,7 @@ local savedDBDefaults = {
 		globalMarketValueMedianTooltip = true,
 		globalMinBuyoutAvgTooltip = true,
 		globalMinBuyoutMedianTooltip = true,
+		globalSaleAvgTooltip = true,
 		showAHTab = true,
 	},
 }
