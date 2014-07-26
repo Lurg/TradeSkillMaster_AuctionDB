@@ -1,3 +1,6 @@
+v2.4
+*Updated to work with the new version of the TSM Desktop Application.
+
 v2.3.10
 *No update. Trying to fix issue with curse.
 
