@@ -213,20 +213,6 @@ function TSM:ProcessAppData(itemID)
 end
 
 function TSM:OnEnable()
-	local function DecodeJSON(data)
-		data = gsub(data, ":", "=")
-		data = gsub(data, "\"horde\"", "horde")
-		data = gsub(data, "\"alliance\"", "alliance")
-		data = gsub(data, "\"m\"", "m")
-		data = gsub(data, "\"n\"", "n")
-		data = gsub(data, "\"b\"", "b")
-		data = gsub(data, "\"([0-9]+)\"", "[%1]")
-		loadstring("TSM_APP_DATA_TMP = " .. data .. "")()
-		local val = TSM_APP_DATA_TMP
-		TSM_APP_DATA_TMP = nil
-		return val
-	end
-
 	if TSM.AppData2 then
 		local factionrealm = (GetRealmName() or "").."-"..(UnitFactionGroup("player") or "")
 		if TSM.AppData2[factionrealm] then
@@ -278,48 +264,7 @@ function TSM:OnEnable()
 		end
 		TSM.AppData2 = nil
 	end
-	if TSM.AppData and not TSM.appData then
-		local realm = strlower(GetRealmName() or "")
-		local faction = strlower(UnitFactionGroup("player") or "")
-		if faction == "" or faction == "Neutral" then return end
-		local numNewScans = 0
-		local maxScanTime = 0
-		for realmInfo, appScanData in pairs(TSM.AppData) do
-			local r, f, t, extra = ("-"):split(realmInfo)
-			if extra then
-				r = r .. "-" .. f
-				f = t
-				t = extra
-			end
-			r = strlower(r)
-			f = strlower(f)
-			local scanTime = tonumber(t)
-			if realm == r and (faction == f or f == "both") and scanTime > TSM.db.factionrealm.appDataUpdate and abs(TSM.Data:GetDay() - TSM.Data:GetDay(scanTime)) <= TSM.MAX_AVG_DAY then
-				local importData = DecodeJSON(appScanData)[faction]
-				if importData then
-					for itemID, data in pairs(importData) do
-						itemID = tonumber(itemID)
-						data.m = tonumber(data.m)
-						data.b = tonumber(data.b)
-						data.t = scanTime
-						if itemID and data.m and data.b then
-							TSM.db.factionrealm.appData[itemID] = TSM.db.factionrealm.appData[itemID] or {}
-							tinsert(TSM.db.factionrealm.appData[itemID], data)
-						end
-					end
-					maxScanTime = max(maxScanTime, scanTime)
-					numNewScans = numNewScans + 1
-				end
-			end
-		end
-
-		if numNewScans > 0 then
-			TSM.db.factionrealm.appDataUpdate = maxScanTime
-			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
-			TSM:Printf(L["Imported %s scans worth of new auction data!"], numNewScans)
-		end
-
-		TSM.AppData = nil
+	if not TSM.appData then
 		TSM:LoadAuctionData()
 	end
 end

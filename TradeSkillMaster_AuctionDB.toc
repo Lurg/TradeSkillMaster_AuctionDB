@@ -18,7 +18,6 @@ Locale\zhTW.lua
 Locale\ptBR.lua
 
 TradeSkillMaster_AuctionDB.lua
-AppData.lua
 AppData_r2.lua
 Modules\data.lua
 Modules\Scanning.lua
