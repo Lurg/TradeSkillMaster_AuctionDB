@@ -1,3 +1,6 @@
+v2.4.1
+*Removed old app code.
+
 v2.4
 *Updated to work with the new version of the TSM Desktop Application.
 
