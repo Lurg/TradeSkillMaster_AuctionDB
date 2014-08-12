@@ -61,7 +61,6 @@ TSM.GLOBAL_PRICE_INFO = {
 
 local savedDBDefaults = {
 	factionrealm = {
-		appData = {},
 		scanData = "",
 		time = 0,
 		lastCompleteScan = 0,
@@ -133,20 +132,9 @@ end
 
 function TSM:LoadAuctionData()
 	local function LoadDataThread(self, itemIDs)
-		-- process new items first
-		for itemID in pairs(TSM.db.factionrealm.appData) do
-			if not TSM.scanData[itemID] then
-				TSM:DecodeItemData(itemID)
-				TSM:ProcessAppData(itemID)
-				TSM:EncodeItemData(itemID)
-			end
-			self:Yield()
-		end
-		
 		local currentDay = TSM.Data:GetDay()
 		for _, itemID in ipairs(itemIDs) do
 			TSM:DecodeItemData(itemID)
-			TSM:ProcessAppData(itemID)
 			if type(TSM.scanData[itemID].scans) == "table" then
 				local temp = {}
 				for i=0, 14 do
@@ -178,38 +166,6 @@ function TSM:LoadAuctionData()
 		tinsert(itemIDs, itemID)
 	end
 	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
-end
-
-function TSM:ProcessAppData(itemID)
-	if not TSM.db.factionrealm.appData[itemID] then return end
-	
-	TSM.scanData[itemID] = TSM.scanData[itemID] or {scans = {}, lastScan = 0}
-	local dbData = TSM.scanData[itemID]
-	local day = TSM.Data:GetDay()
-	for _, appData in ipairs(TSM.db.factionrealm.appData[itemID]) do
-		local marketValue, minBuyout, scanTime = appData.m, appData.b, appData.t
-		if abs(day - TSM.Data:GetDay(scanTime)) <= TSM.MAX_AVG_DAY then
-			local dayScans = dbData.scans
-			dayScans[day] = dayScans[day] or {avg=0, count=0}
-			if type(dayScans[day]) == "number" then
-				-- this should never happen...
-				dayScans[day] = {dayScans[day]}
-			end
-			dayScans[day].avg = dayScans[day].avg or 0
-			dayScans[day].count = dayScans[day].count or 0
-			if #dayScans[day] > 0 then
-				dayScans[day] = TSM.Data:ConvertScansToAvg(dayScans[day])
-			end
-			dayScans[day].avg = floor((dayScans[day].avg * dayScans[day].count + marketValue) / (dayScans[day].count + 1) + 0.5)
-			dayScans[day].count = dayScans[day].count + 1
-			if not dbData.lastScan or dbData.lastScan < scanTime then
-				dbData.lastScan = scanTime
-				dbData.minBuyout = minBuyout > 0 and minBuyout or nil
-			end
-		end
-	end
-	TSM.Data:UpdateMarketValue(dbData)
-	TSM.db.factionrealm.appData[itemID] = nil
 end
 
 function TSM:OnEnable()
@@ -264,7 +220,9 @@ function TSM:OnEnable()
 		end
 		TSM.AppData2 = nil
 	end
-	if not TSM.appData then
+	if TSM.appData then
+		TSM.scanData = {}
+	else
 		TSM:LoadAuctionData()
 	end
 end
@@ -525,7 +483,7 @@ function TSM:GetScans(link)
 	link = select(2, GetItemInfo(link))
 	if not link then return	end
 	local itemID = TSMAPI:GetItemID(link)
-	if not TSM.scanData[itemID] then return	end
+	if not TSM.scanData[itemID] then return end
 	TSM:DecodeItemData(itemID)
 
 	return CopyTable(TSM.scanData[itemID].scans)
