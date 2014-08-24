@@ -1,3 +1,6 @@
+v2.4.3
+*Fixed bug with some realms not loading data from the app properly.
+
 v2.4.2
 *Optimized code to reduce logout times for those using the app.
 
