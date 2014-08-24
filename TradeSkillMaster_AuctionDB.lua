@@ -170,10 +170,11 @@ end
 
 function TSM:OnEnable()
 	if TSM.AppData2 then
+		local temp = {}
 		for key, data in pairs(TSM.AppData2) do
-			TSM.AppData2[strlower(key)] = data
-			TSM.AppData2[key] = nil
+			temp[strlower(key)] = data
 		end
+		TSM.AppData2 = temp
 		local factionrealm = strlower((GetRealmName() or "").."-"..(UnitFactionGroup("player") or ""))
 		if TSM.AppData2[factionrealm] then
 			TSM.db.factionrealm.appDataUpdate = TSM.AppData2[factionrealm].downloadTime
