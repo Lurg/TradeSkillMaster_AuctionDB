@@ -1,3 +1,6 @@
+v2.4.4
+*Updated TSM App URL.
+
 v2.4.3
 *Fixed bug with some realms not loading data from the app properly.
 
