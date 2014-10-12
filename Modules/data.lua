@@ -171,7 +171,7 @@ function Data:ProcessData(scanData, groupItems)
 			scanData[day].avg = floor((scanData[day].avg * scanData[day].count + marketValue) / (scanData[day].count + 1) + 0.5)
 			scanData[day].count = scanData[day].count + 1
 			
-			TSM.scanData[itemID].lastScan = TSM.db.factionrealm.lastCompleteScan
+			TSM.scanData[itemID].lastScan = TSM.db.realm.lastCompleteScan
 			TSM.scanData[itemID].minBuyout = data.minBuyout > 0 and data.minBuyout or nil
 			Data:UpdateMarketValue(TSM.scanData[itemID])
 			TSM:EncodeItemData(itemID)

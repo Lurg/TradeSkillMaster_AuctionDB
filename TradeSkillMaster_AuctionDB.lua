@@ -60,7 +60,7 @@ TSM.GLOBAL_PRICE_INFO = {
 }
 
 local savedDBDefaults = {
-	factionrealm = {
+	realm = {
 		scanData = "",
 		time = 0,
 		lastCompleteScan = 0,
@@ -85,6 +85,11 @@ local savedDBDefaults = {
 
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
+	-- just blow away old factionrealm data for 6.0.1
+	if TradeSkillMaster_AuctionDBDB.factionrealm then
+		TradeSkillMaster_AuctionDBDB.factionrealm = nil
+	end
+
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 
@@ -95,11 +100,9 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	TSM.db.factionrealm.time = 10 -- because AceDB won't save if we don't do this...
 	
 	TSM.scanData = {}
 	TSM.data = TSM.scanData
-	TSM:Deserialize(TSM.db.factionrealm.scanData, TSM.scanData)
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -124,7 +127,6 @@ function TSM:RegisterModule()
 		{ key = "lastCompleteScan", callback = TSM.GetLastCompleteScan },
 		{ key = "lastCompleteScanTime", callback = TSM.GetLastCompleteScanTime },
 		{ key = "adbScans", callback = TSM.GetScans },
-		{ key = "adbOppositeFaction", callback = TSM.GetOppositeFactionData },
 	}
 	TSM.tooltipOptions = {callback = "Config:LoadTooltipOptions"}
 	TSMAPI:NewModule(TSM)
@@ -175,13 +177,13 @@ function TSM:OnEnable()
 			temp[strlower(key)] = data
 		end
 		TSM.AppData2 = temp
-		local factionrealm = strlower((GetRealmName() or "").."-"..(UnitFactionGroup("player") or ""))
-		if TSM.AppData2[factionrealm] then
-			TSM.db.factionrealm.appDataUpdate = TSM.AppData2[factionrealm].downloadTime
-			TSM.db.factionrealm.lastCompleteScan = TSM.AppData2[factionrealm].downloadTime
-			local fields = TSM.AppData2[factionrealm].fields
+		local realm = strlower(GetRealmName() or "")
+		if TSM.AppData2[realm] then
+			TSM.db.realm.appDataUpdate = TSM.AppData2[realm].downloadTime
+			TSM.db.realm.lastCompleteScan = TSM.AppData2[realm].downloadTime
+			local fields = TSM.AppData2[realm].fields
 			TSM.appData = {}
-			for _, data in ipairs(TSM.AppData2[factionrealm].data) do
+			for _, data in ipairs(TSM.AppData2[realm].data) do
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
@@ -233,7 +235,6 @@ function TSM:OnEnable()
 end
 
 function TSM:OnTSMDBShutdown()
-	TSM.db.factionrealm.time = 0
 	TSM:Serialize(TSM.scanData)
 end
 
@@ -303,8 +304,8 @@ function TSM:Reset()
 		whileDead = true,
 		hideOnEscape = true,
 		OnAccept = function()
-			TSM.db.factionrealm.appDataUpdate = TSM.db.factionrealm.appDataUpdate or 0
-			TSM.db.factionrealm.lastCompleteScan = TSM.db.factionrealm.appDataUpdate
+			TSM.db.realm.appDataUpdate = TSM.db.realm.appDataUpdate or 0
+			TSM.db.realm.lastCompleteScan = TSM.db.realm.appDataUpdate
 			for i in pairs(TSM.scanData) do
 				TSM.scanData[i] = nil
 			end
@@ -430,7 +431,7 @@ function TSM:Serialize()
 			tinsert(results, "?" .. encode(itemID) .. "," .. data.encoded)
 		end
 	end
-	TSM.db.factionrealm.scanData = table.concat(results)
+	TSM.db.realm.scanData = table.concat(results)
 end
 
 function TSM:Deserialize(data, resultTbl, fullyDecode)
@@ -471,7 +472,7 @@ function TSM:GetLastCompleteScan()
 		if TSM.data == TSM.scanData then
 			TSM:DecodeItemData(itemID)
 		end
-		if data.lastScan == TSM.db.factionrealm.lastCompleteScan or (not data.lastScan and data.minBuyout) then
+		if data.lastScan == TSM.db.realm.lastCompleteScan or (not data.lastScan and data.minBuyout) then
 			lastScan[itemID] = { marketValue = data.marketValue, minBuyout = data.minBuyout }
 		end
 	end
@@ -480,7 +481,7 @@ function TSM:GetLastCompleteScan()
 end
 
 function TSM:GetLastCompleteScanTime()
-	return TSM.db.factionrealm.lastCompleteScan
+	return TSM.db.realm.lastCompleteScan
 end
 
 function TSM:GetScans(link)
@@ -492,25 +493,6 @@ function TSM:GetScans(link)
 	TSM:DecodeItemData(itemID)
 
 	return CopyTable(TSM.scanData[itemID].scans)
-end
-
-function TSM:GetOppositeFactionData()
-	local realm = GetRealmName()
-	local faction = UnitFactionGroup("player")
-	if faction == "Horde" then
-		faction = "Alliance"
-	elseif faction == "Alliance" then
-		faction = "Horde"
-	else
-		return
-	end
-
-	local data = TSM.db.sv.factionrealm[faction .. " - " .. realm]
-	if not data or type(data.scanData) ~= "string" then return end
-
-	local result = {}
-	TSM:Deserialize(data.scanData, result, true)
-	return result
 end
 
 function TSM:GetMarketValue(itemID)
@@ -541,7 +523,7 @@ function TSM:GetLastScanTime(itemID)
 		TSM:DecodeItemData(itemID)
 		return itemID and TSM.scanData[itemID].lastScan
 	else
-		return TSM.db.factionrealm.appDataUpdate
+		return TSM.db.realm.appDataUpdate
 	end
 end
 
