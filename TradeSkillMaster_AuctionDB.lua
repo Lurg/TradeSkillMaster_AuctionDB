@@ -26,28 +26,12 @@ TSM.GLOBAL_PRICE_INFO = {
 		tooltipKey = "globalMarketValueAvgTooltip",
 	},
 	{
-		source = "DBGlobalMarketMedian",
-		sourceLabel = L["AuctionDB - Global Market Value Median (via TSM App)"],
-		sourceArg = "globalMarketValueMedian",
-		tooltipText = L["Global Market Value Median:"],
-		tooltipText2 = L["Global Market Value Median x%s:"],
-		tooltipKey = "globalMarketValueMedianTooltip",
-	},
-	{
 		source = "DBGlobalMinBuyoutAvg",
 		sourceLabel = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"],
 		sourceArg = "globalMinBuyout",
 		tooltipText = L["Global Min Buyout Avg:"],
 		tooltipText2 = L["Global Min Buyout Avg x%s:"],
 		tooltipKey = "globalMinBuyoutAvgTooltip",
-	},
-	{
-		source = "DBGlobalMinBuyoutMedian",
-		sourceLabel = L["AuctionDB - Global Minimum Buyout Median (via TSM App)"],
-		sourceArg = "globalMinBuyoutMedian",
-		tooltipText = L["Global Min Buyout Median:"],
-		tooltipText2 = L["Global Min Buyout Median x%s:"],
-		tooltipKey = "globalMinBuyoutMedianTooltip",
 	},
 	{
 		source = "DBGlobalSaleAvg",
@@ -75,9 +59,7 @@ local savedDBDefaults = {
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
 		globalMarketValueAvgTooltip = true,
-		globalMarketValueMedianTooltip = true,
 		globalMinBuyoutAvgTooltip = true,
-		globalMinBuyoutMedianTooltip = true,
 		globalSaleAvgTooltip = true,
 		showAHTab = true,
 	},
@@ -187,7 +169,7 @@ function TSM:OnEnable()
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
-					if key == "itemID" then
+					if key == "itemId" then
 						itemID = data[i]
 					else
 						temp[key] = data[i]
@@ -208,7 +190,7 @@ function TSM:OnEnable()
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
-					if key == "itemID" then
+					if key == "itemId" then
 						itemID = data[i]
 					else
 						temp[key] = data[i]
