@@ -84,7 +84,7 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	TSM.db.realm.time = 10 -- because AceDB won't save if we don't do this...
+	--TSM.db.realm.time = 10 -- because AceDB won't save if we don't do this...
 
 	TSM.scanData = {}
 	TSM.data = TSM.scanData
@@ -157,7 +157,6 @@ function TSM:LoadAuctionData()
 end
 
 function TSM:OnEnable()
-	local importedRealmData = false
 	if TSM.AppData2 then
 		local temp = {}
 		for key, data in pairs(TSM.AppData2) do
@@ -182,7 +181,6 @@ function TSM:OnEnable()
 				end
 				if itemID then
 					TSM.appData[itemID] = temp
-					importedRealmData = true
 				else
 					error("Invalid import data.")
 				end
@@ -215,7 +213,7 @@ function TSM:OnEnable()
 		end
 		TSM.AppData2 = nil
 	end
-	if TSM.appData and importedRealmData then
+	if TSM.appData then
 		TSM.scanData = {}
 	else
 		TSM:LoadAuctionData()
