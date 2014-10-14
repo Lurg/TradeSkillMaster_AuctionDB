@@ -138,6 +138,7 @@ function Data:ProcessData(scanData, groupItems)
 	
 	local scanDataList = {}
 	for itemID, data in pairs(scanData) do
+		TSM:Print(itemID)
 		tinsert(scanDataList, {itemID, data})
 	end
 	
