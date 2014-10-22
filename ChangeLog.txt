@@ -1,3 +1,6 @@
+v2.5.2
+*Fixed an issue with importing app data if realm name contained an apostrophe.
+
 v2.5.1
 *Minor bug fix with desktop app and in-game scan interaction.
 
