@@ -160,10 +160,10 @@ function TSM:OnEnable()
 	if TSM.AppData2 then
 		local temp = {}
 		for key, data in pairs(TSM.AppData2) do
-			temp[strlower(key)] = data
+			temp[strlower(gsub(key, "[^A-Za-z]", ""))] = data
 		end
 		TSM.AppData2 = temp
-		local realm = strlower(GetRealmName() or "")
+		local realm = strlower(gsub(GetRealmName(), "[^A-Za-z]", "") or "")
 		if TSM.AppData2[realm] then
 			TSM.db.realm.appDataUpdate = TSM.AppData2[realm].downloadTime
 			TSM.db.realm.lastCompleteScan = TSM.AppData2[realm].downloadTime
