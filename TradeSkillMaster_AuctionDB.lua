@@ -18,6 +18,14 @@ local SECONDS_PER_DAY = 60 * 60 * 24
 
 TSM.GLOBAL_PRICE_INFO = {
 	{
+		source = "DBGlobalMinBuyoutAvg",
+		sourceLabel = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"],
+		sourceArg = "globalMinBuyout",
+		tooltipText = L["Global Min Buyout Avg:"],
+		tooltipText2 = L["Global Min Buyout Avg x%s:"],
+		tooltipKey = "globalMinBuyoutAvgTooltip",
+	},
+	{
 		source = "DBGlobalMarketAvg",
 		sourceLabel = L["AuctionDB - Global Market Value Average (via TSM App)"],
 		sourceArg = "globalMarketValue",
@@ -26,12 +34,12 @@ TSM.GLOBAL_PRICE_INFO = {
 		tooltipKey = "globalMarketValueAvgTooltip",
 	},
 	{
-		source = "DBGlobalMinBuyoutAvg",
-		sourceLabel = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"],
-		sourceArg = "globalMinBuyout",
-		tooltipText = L["Global Min Buyout Avg:"],
-		tooltipText2 = L["Global Min Buyout Avg x%s:"],
-		tooltipKey = "globalMinBuyoutAvgTooltip",
+		source = "DBGlobalHistorical",
+		sourceLabel = L["AuctionDB - Global Historical Price (via TSM App)"],
+		sourceArg = "globalHistorical",
+		tooltipText = L["Global Historical Price:"],
+		tooltipText2 = L["Global Historical Price x%s:"],
+		tooltipKey = "globalHistoricalPriceTooltip",
 	},
 	{
 		source = "DBGlobalSaleAvg",
@@ -58,9 +66,11 @@ local savedDBDefaults = {
 		hidePoorQualityItems = true,
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
+		historicalPriceTooltip = true,
 		globalMarketValueAvgTooltip = true,
 		globalMinBuyoutAvgTooltip = true,
 		globalSaleAvgTooltip = true,
+		globalHistoricalPriceTooltip = true,
 		showAHTab = true,
 	},
 }
@@ -96,6 +106,7 @@ function TSM:RegisterModule()
 	TSM.priceSources = {
 		{ key = "DBMarket", label = L["AuctionDB - Market Value"], callback = "GetMarketValue" },
 		{ key = "DBMinBuyout", label = L["AuctionDB - Minimum Buyout"], callback = "GetMinBuyout" },
+		{ key = "DBHistorical", label = L["AuctionDB - Historical Price (via TSM App)"], callback = "GetHistoricalPrice" },
 	}
 	for _, info in pairs(TSM.GLOBAL_PRICE_INFO) do
 		tinsert(TSM.priceSources, { key = info.source, label = info.sourceLabel, callback = "GetGlobalPrice", arg = info.sourceArg })
@@ -250,14 +261,19 @@ function TSM:GetTooltip(itemString, quantity)
 		end
 	end
 
+	-- add min buyout info
+	if TSM.db.profile.minBuyoutTooltip then
+		InsertValueText(L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemID))
+	end
+
 	-- add market value info
 	if TSM.db.profile.marketValueTooltip then
 		InsertValueText(L["Market Value:"], L["Market Value x%s:"], TSM:GetMarketValue(itemID))
 	end
 
-	-- add min buyout info
-	if TSM.db.profile.minBuyoutTooltip then
-		InsertValueText(L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemID))
+	-- add historical price info
+	if TSM.db.profile.historicalPriceTooltip then
+		InsertValueText(L["Historical Price:"], L["Historical Price x%s:"], TSM:GetHistoricalPrice(itemID))
 	end
 
 	-- add global price info
@@ -523,4 +539,13 @@ function TSM:GetMinBuyout(itemID)
 	end
 	local minBuyout = TSM.data[itemID].minBuyout
 	return minBuyout and minBuyout > 0 and minBuyout or nil
+end
+
+function TSM:GetHistoricalPrice(itemID)
+	if TSM.data == TSM.scanData then return end
+	if itemID and not tonumber(itemID) then
+		itemID = TSMAPI:GetItemID(itemID)
+	end
+	if not itemID or not TSM.data[itemID] then return end
+	return TSM.data[itemID].historical and TSM.data[itemID].historical ~= 0 and TSM.data[itemID].historical or nil
 end

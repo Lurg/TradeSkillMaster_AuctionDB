@@ -1,3 +1,6 @@
+v2.6
+*Added two new price sources (both via the TSM app): "Historical Price" and "Global Historical Price"
+
 v2.5.2
 *Fixed an issue with importing app data if realm name contained an apostrophe.
 
