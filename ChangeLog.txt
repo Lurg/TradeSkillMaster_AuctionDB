@@ -1,3 +1,6 @@
+v2.6.1
+*Updated app data encoding scheme (with r250 of the TSM App) to fix issues with having data for many realms.
+
 v2.6
 *Added two new price sources (both via the TSM app): "Historical Price" and "Global Historical Price"
 
