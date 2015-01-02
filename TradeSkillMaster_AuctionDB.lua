@@ -78,10 +78,8 @@ local savedDBDefaults = {
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
 	-- just blow away old factionrealm data for 6.0.1
-	if TradeSkillMaster_AuctionDBDB then
-		if TradeSkillMaster_AuctionDBDB.factionrealm then
-			TradeSkillMaster_AuctionDBDB.factionrealm = nil
-		end
+	if TradeSkillMaster_AuctionDBDB and TradeSkillMaster_AuctionDBDB.factionrealm then
+		TradeSkillMaster_AuctionDBDB.factionrealm = nil
 	end
 
 	-- load the savedDB into TSM.db
@@ -94,7 +92,6 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	--TSM.db.realm.time = 10 -- because AceDB won't save if we don't do this...
 
 	TSM.scanData = {}
 	TSM.data = TSM.scanData
@@ -167,20 +164,33 @@ function TSM:LoadAuctionData()
 	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
 end
 
+function TSMAuctionDB_LoadAppData(index, dataStr)
+	if index ~= "Global" and index ~= GetRealmName() then return end
+	local data = assert(loadstring(dataStr))()
+	TSM.AppData = TSM.AppData or {}
+	if index == "Global" then
+		TSM.AppData.global = data
+	else
+		TSM.AppData.realm = data
+	end
+end
+
 function TSM:OnEnable()
+	-- Backwards compatability until r250 of the app is released
 	if TSM.AppData2 then
-		local temp = {}
-		for key, data in pairs(TSM.AppData2) do
-			temp[strlower(gsub(key, "[^A-Za-z]", ""))] = data
-		end
-		TSM.AppData2 = temp
-		local realm = strlower(gsub(GetRealmName(), "[^A-Za-z]", "") or "")
-		if TSM.AppData2[realm] then
-			TSM.db.realm.appDataUpdate = TSM.AppData2[realm].downloadTime
-			TSM.db.realm.lastCompleteScan = TSM.AppData2[realm].downloadTime
-			local fields = TSM.AppData2[realm].fields
+		TSM.AppData = {global=TSM.AppData2.Global, realm=TSM.AppData2[GetRealmName()]}
+		TSM.AppData2 = nil
+	end
+	
+	TSMAuctionDB_LoadAppData = nil
+	if TSM.AppData then
+		local realm = GetRealmName()
+		if TSM.AppData.realm then
+			TSM.db.realm.appDataUpdate = TSM.AppData.realm.downloadTime
+			TSM.db.realm.lastCompleteScan = TSM.AppData.realm.downloadTime
+			local fields = TSM.AppData.realm.fields
 			TSM.appData = {}
-			for _, data in ipairs(TSM.AppData2[realm].data) do
+			for _, data in ipairs(TSM.AppData.realm.data) do
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
@@ -198,10 +208,10 @@ function TSM:OnEnable()
 			end
 			TSM.data = TSM.appData
 		end
-		if TSM.AppData2.global then
-			local fields = TSM.AppData2.global.fields
+		if TSM.AppData.global then
+			local fields = TSM.AppData.global.fields
 			TSM.appData = TSM.appData or {}
-			for _, data in ipairs(TSM.AppData2.global.data) do
+			for _, data in ipairs(TSM.AppData.global.data) do
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
@@ -222,7 +232,7 @@ function TSM:OnEnable()
 			end
 			TSM.data = TSM.appData
 		end
-		TSM.AppData2 = nil
+		TSM.AppData = nil
 	end
 	if TSM.appData then
 		TSM.scanData = {}
