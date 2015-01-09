@@ -165,7 +165,7 @@ function TSM:LoadAuctionData()
 end
 
 function TSMAuctionDB_LoadAppData(index, dataStr)
-	if index ~= "Global" and gsub(index, "`", "'") ~= gsub(GetRealmName(), "`", "'") then return end
+	if index ~= "Global" and gsub(index, "’", "'") ~= gsub(GetRealmName(), "’", "'") then return end
 	local data = assert(loadstring(dataStr))()
 	TSM.AppData = TSM.AppData or {}
 	if index == "Global" then
