@@ -1,3 +1,6 @@
+v2.6.3
+*Possible fix for realm names (weird blizzard apostrophe again).
+
 v2.6.2
 *Fixed again an issue with importing app data if realm name contained an apostrophe.
 
