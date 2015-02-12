@@ -121,6 +121,7 @@ function TSM:RegisterModule()
 		{ key = "lastCompleteScan", callback = TSM.GetLastCompleteScan },
 		{ key = "lastCompleteScanTime", callback = TSM.GetLastCompleteScanTime },
 		{ key = "adbScans", callback = TSM.GetScans },
+		{ key = "auctionQuantity", callback = "GetAuctionQuantity" },
 	}
 	TSM.tooltipOptions = { callback = "Config:LoadTooltipOptions" }
 	TSMAPI:NewModule(TSM)
@@ -478,7 +479,7 @@ function TSM:GetLastCompleteScan()
 			TSM:DecodeItemData(itemID)
 		end
 		if data.lastScan == TSM.db.realm.lastCompleteScan or (not data.lastScan and data.minBuyout) then
-			lastScan[itemID] = { marketValue = data.marketValue, minBuyout = data.minBuyout }
+			lastScan[itemID] = {marketValue=data.marketValue, minBuyout=data.minBuyout, quantity=TSM:GetAuctionQuantity(itemID)}
 		end
 	end
 
@@ -551,4 +552,13 @@ function TSM:GetHistoricalPrice(itemID)
 	end
 	if not itemID or not TSM.data[itemID] then return end
 	return TSM.data[itemID].historical and TSM.data[itemID].historical ~= 0 and TSM.data[itemID].historical or nil
+end
+
+function TSM:GetAuctionQuantity(itemID)
+	if TSM.data == TSM.scanData then return end
+	if itemID and not tonumber(itemID) then
+		itemID = TSMAPI:GetItemID(itemID)
+	end
+	if not itemID or not TSM.data[itemID] then return end
+	return TSM.data[itemID].quantity and TSM.data[itemID].quantity > 0 and TSM.data[itemID].quantity or nil
 end
