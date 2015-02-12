@@ -229,6 +229,9 @@ function TSM:OnEnable()
 		TSM.AppData = nil
 	end
 	if TSM.appData then
+		for itemID in pairs(TSM.appData) do
+			TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemID))
+		end
 		TSM.scanData = {}
 	else
 		TSM:LoadAuctionData()
