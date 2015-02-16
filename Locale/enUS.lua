@@ -100,6 +100,7 @@ L["Running query..."] = true
 L["Scan Selected Groups"] = true
 L["Scanning %d / %d (Page %d / %d)"] = true
 L["Scanning page %s/%s"] = true
+L["Scanning page %s/%s - Approximately %s remaining"] = true
 L["Scanning the auction house in game is no longer necessary!"] = true
 L["Search Options"] = true
 L["Search"] = true

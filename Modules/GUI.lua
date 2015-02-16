@@ -12,6 +12,12 @@ local GUI = TSM:NewModule("GUI")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 local private = {frame=nil}
 
+
+
+-- ============================================================================
+-- Module Functions
+-- ============================================================================
+
 function GUI:Show(frame)
 	private:Create(frame)
 	private.frame:Show()
@@ -21,7 +27,7 @@ end
 
 function GUI:Hide()
 	private.frame:Hide()
-	TSM.Scan:DoneScanning()
+	TSM.Scan:StopScanning()
 	TSMAPI.AuctionScan:StopScan()
 	TSMAPI:CancelFrame("auctionDBGetAllStatus")
 end
@@ -36,6 +42,9 @@ function GUI:UpdateStatus(text, major, minor)
 end
 
 
+-- ============================================================================
+-- GUI Creation Functions
+-- ============================================================================
 
 function private:Create(parent)
 	if private.frame then return end
@@ -75,6 +84,17 @@ function private:Create(parent)
 						key = "groupTree",
 						groupTreeInfo = {nil, "AuctionDB"},
 						points = {{"TOPLEFT", 5, -35}, {"BOTTOMRIGHT", -205, 5}},
+					},
+					{
+						type = "StatusBarFrame",
+						key = "statusBar",
+						name = "TSMAuctionDBStatusBar",
+						size = {0, 30},
+						points = {{"TOPLEFT"}, {"TOPRIGHT"}},
+					},
+					{
+						type = "HLine",
+						offset = -30,
 					},
 					{
 						type = "VLine",
@@ -146,18 +166,21 @@ function private:Create(parent)
 						OnClick = TSM.Scan.StartGetAllScan,
 					},
 					fullBtn = {
-						OnClick = TSM.Scan.StartFullScan,
+						OnClick = TSM.Scan.StartFullScan2,
 					},
 					groupBtn = {
 						OnClick = function()
-							local items = {}
-							for groupName, data in pairs(private.frame.content.groupTree:GetSelectedGroupInfo()) do
-								groupName = TSMAPI:FormatGroupPath(groupName, true)
+							local items, includedItems = {}, {}
+							for _, data in pairs(private.frame.content.groupTree:GetSelectedGroupInfo()) do
 								for itemString in pairs(data.items) do
-									tinsert(items, itemString)
+									itemString = TSMAPI:GetBaseItemString(itemString)
+									if not includedItems[itemString] then
+										includedItems[itemString] = true
+										tinsert(items, itemString)
+									end
 								end
 							end
-							TSM.Scan:StartGroupScan(items)
+							TSM.Scan:StartGroupScan2(items)
 						end,
 					},
 				},
@@ -166,7 +189,7 @@ function private:Create(parent)
 	}
 	private.frame = TSMAPI:BuildFrame(frameInfo)
 	TSMAPI.Design:SetFrameBackdropColor(private.frame.content)
-	private.frame.statusBar = private.frame.statusBar or private:CreateStatusBar(private.frame.content)
+	private.frame.statusBar = private.frame.content.statusBar
 	
 	-- create animation for app ad
 	local ag = private.frame.appAd:CreateAnimationGroup()
@@ -177,8 +200,14 @@ function private:Create(parent)
 	ag:Play()
 end
 
+
+
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
+
 function private:UpdateGetAllStatus()
-	if TSM.Scan.isScanning then
+	if TSM.Scan:IsScanning() then
 		private.frame.content.buttonFrame.getAllBtn:Disable()
 		private.frame.content.buttonFrame.fullBtn:Disable()
 		private.frame.content.buttonFrame.groupBtn:Disable()
@@ -201,12 +230,4 @@ function private:UpdateGetAllStatus()
 		private.frame.content.buttonFrame.groupBtn:Enable()
 		private.frame.content.buttonFrame.getAllStatusText:SetText("|cff009900"..L["Ready"])
 	end
-end
-
-
-function private:CreateStatusBar(parent)
-	local frame = TSMAPI.GUI:CreateStatusBar(parent, "TSMAuctionDBStatusBar")
-	TSMAPI.GUI:CreateHorizontalLine(frame, -30, parent)
-	
-	return frame
 end

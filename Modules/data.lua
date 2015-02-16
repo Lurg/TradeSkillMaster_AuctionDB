@@ -115,12 +115,12 @@ function Data:GetMarketValue(scans)
 	return totalWeight > 0 and floor(totalAmount / totalWeight + 0.5) or 0
 end
 
-function Data:ProcessData(scanData, groupItems)
-	if TSM.processingData then return TSMAPI:CreateTimeDelay(0.2, function() Data:ProcessData(scanData, groupItems) end) end
+function Data:ProcessData(scanData, itemList)
+	if TSM.processingData then return TSMAPI:CreateTimeDelay(0.2, function() Data:ProcessData(scanData, itemList) end) end
 
 	-- wipe all the minBuyout data
-	if groupItems then
-		for itemString in pairs(groupItems) do
+	if itemList then
+		for _, itemString in ipairs(itemList) do
 			local itemID = TSMAPI:GetItemID(itemString)
 			if TSM.scanData[itemID] then
 				TSM:DecodeItemData(itemID)
