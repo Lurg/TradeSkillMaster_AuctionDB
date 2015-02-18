@@ -12,6 +12,10 @@ local Scan = TSM:NewModule("Scan", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 local private = {threadId=nil}
 
+local MIN_PERCENTILE = 0.15 -- consider at least the lowest 15% of auctions
+local MAX_PERCENTILE = 0.30 -- consider at most the lowest 30% of auctions
+local MAX_JUMP = 1.2 -- between the min and max percentiles, any increase in price over 120% will trigger a discard of remaining auctions
+
 
 
 -- ============================================================================
@@ -22,9 +26,15 @@ function Scan:StartFullScan2()
 	Scan:StopScanning()
 	private.threadId = TSMAPI.Threading:Start(private.FullScanThread, 0.7, Scan.StopScanning)
 end
+
 function Scan:StartGroupScan2(itemList)
 	Scan:StopScanning()
 	private.threadId = TSMAPI.Threading:Start(private.GroupScanThread, 0.7, Scan.StopScanning, itemList)
+end
+
+function Scan:StartGetAllScan2()
+	Scan:StopScanning()
+	private.threadId = TSMAPI.Threading:Start(private.GetAllScanThread, 0.7, Scan.StopScanning)
 end
 
 function Scan:StopScanning()
@@ -76,7 +86,23 @@ function private.FullScanThread(self)
 	end
 	
 	TSM.GUI:UpdateStatus("Processing data...", 100)
-	private:ProcessScanDataThread(self, database)
+	local scanData = {}
+	for _, record in ipairs(database.records) do
+		if not scanData[record.itemString] then
+			scanData[record.itemString] = {buyouts={}, minBuyout=0, numAuctions=0}
+		end
+		if record.itemBuyout > 0 then
+			if scanData[record.itemString].minBuyout == 0 or record.itemBuyout < scanData[record.itemString].minBuyout then
+				scanData[record.itemString].minBuyout = record.itemBuyout
+			end
+			for i=1, record.stackSize do
+				tinsert(scanData[record.itemString].buyouts, record.itemBuyout)
+			end
+		end
+		scanData[record.itemString].numAuctions = scanData[record.itemString].numAuctions + 1
+		self:Yield()
+	end
+	private:ProcessScanDataThread(self, scanData)
 	TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
 end
 
@@ -132,45 +158,94 @@ function private.GroupScanThread(self, itemList)
 	end
 	
 	TSM.GUI:UpdateStatus("Processing data...", 100)
-	private:ProcessScanDataThread(self, database, itemList)
+	local scanData = {}
+	for _, record in ipairs(database.records) do
+		if not scanData[record.itemString] then
+			scanData[record.itemString] = {buyouts={}, minBuyout=0, numAuctions=0}
+		end
+		if record.itemBuyout > 0 then
+			if scanData[record.itemString].minBuyout == 0 or record.itemBuyout < scanData[record.itemString].minBuyout then
+				scanData[record.itemString].minBuyout = record.itemBuyout
+			end
+			for i=1, record.stackSize do
+				tinsert(scanData[record.itemString].buyouts, record.itemBuyout)
+			end
+		end
+		scanData[record.itemString].numAuctions = scanData[record.itemString].numAuctions + 1
+		self:Yield()
+	end
+	private:ProcessScanDataThread(self, scanData, itemList)
 	TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
 end
 
 function private.GetAllScanThread(self)
 	self:SetThreadName("AUCTIONDB_GETALL_SCAN")
 	TSMAPI.AuctionScan2:StopScan()
-	TSM.GUI:UpdateStatus(L["Running query..."], 0, 0)
 	
-	local database = TSMAPI:NewAuctionRecordDatabase()
-	TSMAPI.AuctionScan2:ScanQuery({name=""}, self:GetSendMsgToSelfCallback(), nil, database)
-	local startTime = time()
+	-- wait until we can send the GetAll query
 	while true do
-		local args = self:ReceiveMsg()
-		local event = tremove(args, 1)
-		if event == "SCAN_PAGE_UPDATE" then
-			-- the page we're scanning has changed
-			local page, total = unpack(args)
-			local remainingPages = total - page
-			local statusText = format(L["Scanning page %s/%s"], page, total)
-			if page > 50 and remainingPages > 0 then
-				-- add approximate time remaining to the status text
-				statusText = format(L["Scanning page %s/%s - Approximately %s remaining"], page, total, SecondsToTime(floor((page / (time() - startTime)) * remainingPages)))
+		local canScan, canGetAll = CanSendAuctionQuery()
+		if canScan then
+			if not canGetAll then
+				TSM:Print(L["Can't run a GetAll scan right now."])
+				return
 			end
-			TSM.GUI:UpdateStatus(statusText, page*100/total)
-		elseif event == "SCAN_COMPLETE" then
-			-- we're done scanning
 			break
-		elseif event == "INTERRUPTED" then
-			-- scan was interrupted
+		end
+		self:Yield(true)
+	end
+	
+	TSM.GUI:UpdateStatus(L["Running query..."], 0, 0)
+	QueryAuctionItems("", nil, nil, 0, 0, 0, 0, 0, 0, true)
+	self:WaitForEvent("AUCTION_ITEM_LIST_UPDATE")
+	self:WaitForFunction(CanSendAuctionQuery)
+	
+	local numAuctions, totalNum = GetNumAuctionItems("list")
+	if numAuctions ~= totalNum then
+		TSM:Print(L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM desktop application for your scans is recommended."])
+		TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
+		return
+	end
+	
+	-- scan the results (slowly as to not cause disconnects)
+	local scanData = {}
+	for i=1, numAuctions do
+		TSM.GUI:UpdateStatus(format(L["Scanning page %s/%s"], 1, 1), i*100/numAuctions)
+		
+		local itemString = TSMAPI:GetBaseItemString2(GetAuctionItemLink("list", i))
+		local stackSize, buyout = TSMAPI:Select({3, 10}, GetAuctionItemInfo("list", i))
+		if not itemString or not stackSize or not buyout then
+			TSM:Print(L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM desktop application for your scans is recommended."])
 			TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
 			return
-		else
-			error("Unexpected message: "..tostring(event))
 		end
+		
+		local itemBuyout = TSMAPI:Round(buyout / stackSize)
+		if not scanData[itemString] then
+			scanData[itemString] = {buyouts={}, minBuyout=0, numAuctions=0}
+		end
+		if itemBuyout > 0 then
+			if scanData[itemString].minBuyout == 0 or itemBuyout < scanData[itemString].minBuyout then
+				scanData[itemString].minBuyout = itemBuyout
+			end
+			for i=1, stackSize do
+				tinsert(scanData[itemString].buyouts, itemBuyout)
+			end
+		end
+		scanData[itemString].numAuctions = scanData[itemString].numAuctions + 1
+		
+		if i % 500 == 0 then
+			self:Sleep(0.1)
+		end
+		self:Yield()
+	end
+	if numAuctions ~= GetNumAuctionItems("list") then
+		TSM:Print(L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM desktop application for your scans is recommended."])
+		return
 	end
 	
 	TSM.GUI:UpdateStatus("Processing data...", 100)
-	private:ProcessScanDataThread(self, database)
+	private:ProcessScanDataThread(self, scanData)
 	TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
 end
 
@@ -180,118 +255,86 @@ end
 -- Helper Functions
 -- ============================================================================
 
-function private:ProcessScanDataThread(self, database, itemList)
-	local data = {}
+function private:ProcessScanDataThread(self, scanData, itemList)
+	local scanTime = time()
 	
-	for _, record in ipairs(database) do
-		local itemID = TSMAPI:GetItemID(record.itemString)
-		if not data[itemID] then
-			data[itemID] = {buyouts={}, minBuyout=0, numAuctions=0}
+	local scannedItems = nil
+	if itemList then
+		scannedItems = {}
+		for _, itemString in ipairs(itemList) do
+			scannedItems[itemString] = true
 		end
-		if record.itemBuyout > 0 then
-			if data[itemID].minBuyout == 0 or record.itemBuyout < data[itemID].minBuyout then
-				data[itemID].minBuyout = record.itemBuyout
-			end
-			for i=1, record.stackSize do
-				tinsert(data[itemID].buyouts, record.itemBuyout)
-			end
-		end
-		data[itemID].numAuctions = data[itemID].numAuctions + 1
+	elseif not TSM.db.realm.hasAppData then
+		TSM.db.realm.lastCompleteScan = scanTime
 	end
 	
-	if not itemList then
-		TSM.db.realm.lastCompleteScan = time()
+	-- clear min buyotus / num auctions and update last scan time for items we should have scanned
+	for itemString, data in pairs(TSM.realmData) do
+		if not scannedItems or scannedItems[itemString] then
+			data.minBuyout = nil
+			data.numAuctions = nil
+			data.lastScan = scanTime
+			self:Yield()
+		end
 	end
-	print("PROCESS DATA", data, itemList)
-	-- TSM.Data:ProcessData(data, itemList)
+	
+	-- process new data
+	TSM.updatedRealmData = true
+	for itemString, data in pairs(scanData) do
+		itemString = TSMAPI:GetBaseItemString2(itemString)
+		if TSM.db.realm.hasAppData and TSM.realmData[itemString] then
+			TSM.realmData[itemString].minBuyout = data.minBuyout
+			TSM.realmData[itemString].numAuctions = data.numAuctions
+			TSM.realmData[itemString].lastScan = scanTime
+		else
+			TSM.realmData[itemString] = TSM.realmData[itemString] or {}
+			if #data.buyouts > 0 then
+				TSM.realmData[itemString].marketValue = private:CalculateMarketValue(data.buyouts)
+			else
+				TSM.realmData[itemString].marketValue = TSM.realmData[itemString].marketValue or 0
+			end
+			TSM.realmData[itemString].minBuyout = data.minBuyout
+			TSM.realmData[itemString].numAuctions = data.numAuctions
+			TSM.realmData[itemString].lastScan = scanTime
+		end
+		self:Yield()
+	end
 end
 
-
-
-
-
-Scan.groupScanData = {}
-Scan.filterList = {}
-Scan.numFilters = 0
-
-function Scan.ProcessGetAllScan(self)
-	local temp = 0
-	while true do
-		temp = min(temp + 1, 100)
-		self:Sleep(0.2)
-		if not Scan.isScanning then return end
-		if Scan.getAllLoaded then
+function private:CalculateMarketValue(buyouts)
+	local totalNum, totalBuyout = 0, 0
+	local numRecords = #buyouts
+	
+	for i=1, numRecords do
+		totalNum = i - 1
+		if i ~= 1 and i > numRecords*MIN_PERCENTILE and (i > numRecords*MAX_PERCENTILE or buyouts[i] >= MAX_JUMP*buyouts[i-1]) then
 			break
 		end
-		TSM.GUI:UpdateStatus(L["Running query..."], nil, temp)
-	end
-
-	local data = {}
-	for i=1, Scan.getAllLoaded do
-		TSM.GUI:UpdateStatus(format(L["Scanning page %s/%s"], 1, 1), i*100/Scan.getAllLoaded)
-		if i % 100 == 0 then
-			self:Yield()
-			if GetNumAuctionItems("list") ~= Scan.getAllLoaded then
-				TSM:Print(L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM application for your scans is recommended."])
-				Scan:DoneScanning()
-				return
-			end
-		end
 		
-		local itemID = TSMAPI:GetItemID(GetAuctionItemLink("list", i))
-		local _, _, count, _, _, _, _, _, _, buyout = GetAuctionItemInfo("list", i)
-		if itemID and buyout and buyout > 0 then
-			data[itemID] = data[itemID] or {records={}, minBuyout=math.huge, quantity=0}
-			data[itemID].minBuyout = min(data[itemID].minBuyout, floor(buyout/count))
-			data[itemID].quantity = data[itemID].quantity + count
-			for j=1, count do
-				tinsert(data[itemID].records, floor(buyout/count))
-			end
+		totalBuyout = totalBuyout + buyouts[i]
+		if i == numRecords then
+			totalNum = i
 		end
 	end
 	
-	TSM.db.realm.lastCompleteScan = time()
-	TSM.Data:ProcessData(data)
+	local uncorrectedMean = totalBuyout / totalNum
+	local varience = 0
 	
-	TSM.GUI:UpdateStatus(L["Processing data..."])
-	while TSM.processingData do
-		self:Sleep(0.2)
+	for i=1, totalNum do
+		varience = varience + (buyouts[i]-uncorrectedMean)^2
 	end
 	
-	TSM:Print(L["It is strongly recommended that you reload your ui (type '/reload') after running a GetAll scan. Otherwise, any other scans (Post/Cancel/Search/etc) will be much slower than normal."])
-end
-
-function Scan:AUCTION_ITEM_LIST_UPDATE()
-	Scan:UnregisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	local num, total = GetNumAuctionItems("list")
-	if num ~= total or num == 0 then
-		TSM:Print(L["GetAll scan did not run successfully due to issues on Blizzard's end. Using the TSM application for your scans is recommended."])
-		Scan:DoneScanning()
-		return
+	local stdDev = sqrt(varience/totalNum)
+	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
+	
+	for i=1, totalNum do
+		if abs(uncorrectedMean - buyouts[i]) < 1.5*stdDev then
+			correctedTotalNum = correctedTotalNum + 1
+			correctedTotalBuyout = correctedTotalBuyout + buyouts[i]
+		end
 	end
-	Scan.getAllLoaded = num
-end
-
-function Scan:GetAllScanQuery()
-	local canScan, canGetAll = CanSendAuctionQuery()
-	if not canGetAll then return TSM:Print(L["Can't run a GetAll scan right now."]) end
-	if not canScan then return TSMAPI:CreateTimeDelay(0.5, Scan.GetAllScanQuery) end
-	QueryAuctionItems("", nil, nil, 0, 0, 0, 0, 0, 0, true)
-	Scan:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-	TSMAPI.Threading:Start(Scan.ProcessGetAllScan, 1, function() Scan:DoneScanning() end)
-end
-
-function Scan:StartGetAllScan()
-	TSM.db.profile.lastGetAll = time()
-	Scan.isScanning = "GetAll"
-	Scan.isBuggedGetAll = nil
-	Scan.groupItems = nil
-	TSMAPI.AuctionScan:StopScan()
-	Scan:GetAllScanQuery()
-end
-
-function Scan:DoneScanning()
-	TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
-	Scan.isScanning = nil
-	Scan.getAllLoaded = nil
+	
+	local correctedMean = floor(correctedTotalBuyout / correctedTotalNum + 0.5)
+	
+	return correctedMean
 end

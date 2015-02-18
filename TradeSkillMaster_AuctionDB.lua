@@ -53,10 +53,14 @@ TSM.GLOBAL_PRICE_INFO = {
 
 local savedDBDefaults = {
 	realm = {
+		lastSaveTime = nil,
 		scanData = "",
-		time = 0,
 		lastCompleteScan = 0,
-		appDataUpdate = 0,
+		hasAppData = nil,
+	},
+	global = {
+		scanData = "",
+		lastUpdate = 0,
 	},
 	profile = {
 		tooltip = true,
@@ -92,10 +96,9 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-
-	TSM.scanData = {}
-	TSM.data = TSM.scanData
-	TSM:Deserialize(TSM.db.realm.scanData, TSM.scanData)
+	
+	-- TSM3 changes
+	TSM.db.realm.appDataUpdate = nil
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -114,54 +117,12 @@ function TSM:RegisterModule()
 	if TSM.db.profile.showAHTab then
 		TSM.auctionTab = { callbackShow = "GUI:Show", callbackHide = "GUI:Hide" }
 	end
-	TSM.slashCommands = {
-		{ key = "adbreset", label = L["Resets AuctionDB's scan data"], callback = "Reset" },
-	}
 	TSM.moduleAPIs = {
 		{ key = "lastCompleteScan", callback = TSM.GetLastCompleteScan },
 		{ key = "lastCompleteScanTime", callback = TSM.GetLastCompleteScanTime },
-		{ key = "adbScans", callback = TSM.GetScans },
 	}
 	TSM.tooltipOptions = { callback = "Config:LoadTooltipOptions" }
 	TSMAPI:NewModule(TSM)
-end
-
-function TSM:LoadAuctionData()
-	local function LoadDataThread(self, itemIDs)
-		local currentDay = TSM.Data:GetDay()
-		for _, itemID in ipairs(itemIDs) do
-			TSM:DecodeItemData(itemID)
-			if type(TSM.scanData[itemID].scans) == "table" then
-				local temp = {}
-				for i = 0, 14 do
-					if i <= TSM.MAX_AVG_DAY then
-						temp[currentDay - i] = TSM.Data:ConvertScansToAvg(TSM.scanData[itemID].scans[currentDay - i])
-					else
-						local dayScans = TSM.scanData[itemID].scans[currentDay - i]
-						if type(dayScans) == "table" then
-							if dayScans.avg then
-								temp[currentDay - i] = dayScans.avg
-							else
-								-- old method
-								temp[currentDay - i] = TSM.Data:GetAverage(dayScans)
-							end
-						elseif type(dayScans) == "number" then
-							temp[currentDay - i] = dayScans
-						end
-					end
-				end
-				TSM.scanData[itemID].scans = temp
-			end
-			TSM:EncodeItemData(itemID)
-			self:Yield()
-		end
-	end
-
-	local itemIDs = {}
-	for itemID in pairs(TSM.scanData) do
-		tinsert(itemIDs, itemID)
-	end
-	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
 end
 
 function TSMAuctionDB_LoadAppData(index, dataStr)
@@ -176,122 +137,115 @@ function TSMAuctionDB_LoadAppData(index, dataStr)
 end
 
 function TSM:OnEnable()
-	TSMAuctionDB_LoadAppData = nil
-	if TSM.AppData then
-		if TSM.AppData.realm then
-			TSM.db.realm.appDataUpdate = TSM.AppData.realm.downloadTime
-			TSM.db.realm.lastCompleteScan = TSM.AppData.realm.downloadTime
-			local fields = TSM.AppData.realm.fields
-			TSM.appData = {}
-			for _, data in ipairs(TSM.AppData.realm.data) do
-				local temp = {}
-				local itemID
-				for i, key in ipairs(fields) do
-					if key == "itemId" then
-						itemID = data[i]
-					else
-						temp[key] = data[i]
-					end
-				end
-				if itemID then
-					TSM.appData[itemID] = temp
+	-- check if we can load realm data from the app
+	local realmAppData = TSM.AppData and TSM.AppData.realm
+	if realmAppData and realmAppData.downloadTime >= TSM.db.realm.lastCompleteScan then
+		TSM.updatedRealmData = (realmAppData.downloadTime > TSM.db.realm.lastCompleteScan)
+		TSM.db.realm.lastCompleteScan = realmAppData.downloadTime
+		TSM.db.realm.hasAppData = true
+		TSM.realmData = {}
+		local fields = realmAppData.fields
+		for _, data in ipairs(realmAppData.data) do
+			local itemString
+			for i, key in ipairs(fields) do
+				if i == 1 then
+					-- item string must be the first field
+					itemString = TSMAPI:GetBaseItemString2(data[i])
+					TSM.realmData[itemString] = {}
 				else
-					error("Invalid import data.")
+					TSM.realmData[itemString][key] = data[i]
 				end
 			end
-			TSM.data = TSM.appData
+			TSM.realmData[itemString].lastScan = realmAppData.downloadTime
 		end
-		if TSM.AppData.global then
-			local fields = TSM.AppData.global.fields
-			TSM.appData = TSM.appData or {}
-			for _, data in ipairs(TSM.AppData.global.data) do
-				local temp = {}
-				local itemID
-				for i, key in ipairs(fields) do
-					if key == "itemId" then
-						itemID = data[i]
-					else
-						temp[key] = data[i]
-					end
-				end
-				if itemID then
-					TSM.appData[itemID] = TSM.appData[itemID] or {}
-					for key, value in pairs(temp) do
-						TSM.appData[itemID][key] = value
-					end
-				else
-					error("Invalid import data.")
-				end
-			end
-			TSM.data = TSM.appData
-		end
-		TSM.AppData = nil
-	end
-	if TSM.appData then
-		for itemID in pairs(TSM.appData) do
-			TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemID))
-		end
-		TSM.scanData = {}
 	else
-		TSM:LoadAuctionData()
+		TSM.Compress:LoadRealmData()
+	end
+	
+	local globalAppData = TSM.AppData and TSM.AppData.global
+	if globalAppData and globalAppData.downloadTime >= TSM.db.global.lastUpdate then
+		TSM.updatedGlobalData = (globalAppData.downloadTime > TSM.db.global.lastUpdate)
+		TSM.db.global.lastUpdate = globalAppData.downloadTime
+		TSM.globalData = {}
+		local fields = globalAppData.fields
+		for _, data in ipairs(globalAppData.data) do
+			local itemString
+			for i, key in ipairs(fields) do
+				if i == 1 then
+					-- item string must be the first field
+					itemString = TSMAPI:GetBaseItemString2(data[i])
+					TSM.globalData[itemString] = {}
+				else
+					TSM.globalData[itemString][key] = data[i]
+				end
+			end
+		end
+	else
+		TSM.Compress:LoadGlobalData()
+	end
+	
+	TSM.AppData = nil
+	TSMAuctionDB_LoadAppData = nil
+	for itemString in pairs(TSM.realmData) do
+		TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemString))
 	end
 end
 
 function TSM:OnTSMDBShutdown()
-	TSM:Serialize(TSM.scanData)
+	TSM.Compress:SaveRealmData()
+	TSM.Compress:SaveGlobalData()
+end
+
+local function TooltipInsertValueText(text, quantity, str, strAlt, value)
+	if not value then return end
+	if TSMAPI:GetMoneyCoinsTooltip() then
+		if IsShiftKeyDown() then
+			tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoneyIcon(value * quantity, "|cffffffff", true) })
+		else
+			tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoneyIcon(value, "|cffffffff", true) })
+		end
+	else
+		if IsShiftKeyDown() then
+			tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoney(value * quantity, "|cffffffff", true) })
+		else
+			tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoney(value, "|cffffffff", true) })
+		end
+	end
 end
 
 function TSM:GetTooltip(itemString, quantity)
 	if not TSM.db.profile.tooltip then return end
-	if not strfind(itemString, "item:") then return end
-	local itemID = TSMAPI:GetItemID(itemString)
-	if not itemID or not TSM.data[itemID] then return end
+	itemString = TSMAPI:GetBaseItemString2(itemString)
+	if not itemString then return end
+	
 	local text = {}
-	local moneyCoinsTooltip = TSMAPI:GetMoneyCoinsTooltip()
 	quantity = quantity or 1
-
-	local function InsertValueText(str, strAlt, value)
-		if not value then return end
-		if moneyCoinsTooltip then
-			if IsShiftKeyDown() then
-				tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoneyIcon(value * quantity, "|cffffffff", true) })
-			else
-				tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoneyIcon(value, "|cffffffff", true) })
-			end
-		else
-			if IsShiftKeyDown() then
-				tinsert(text, { left = "  " .. format(strAlt, quantity), right = TSMAPI:FormatTextMoney(value * quantity, "|cffffffff", true) })
-			else
-				tinsert(text, { left = "  " .. str, right = TSMAPI:FormatTextMoney(value, "|cffffffff", true) })
-			end
-		end
-	end
 
 	-- add min buyout info
 	if TSM.db.profile.minBuyoutTooltip then
-		InsertValueText(L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemID))
+		TooltipInsertValueText(text, quantity, L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemString))
 	end
 
 	-- add market value info
 	if TSM.db.profile.marketValueTooltip then
-		InsertValueText(L["Market Value:"], L["Market Value x%s:"], TSM:GetMarketValue(itemID))
+		TooltipInsertValueText(text, quantity, L["Market Value:"], L["Market Value x%s:"], TSM:GetMarketValue(itemString))
 	end
 
 	-- add historical price info
 	if TSM.db.profile.historicalPriceTooltip then
-		InsertValueText(L["Historical Price:"], L["Historical Price x%s:"], TSM:GetHistoricalPrice(itemID))
+		TooltipInsertValueText(text, quantity, L["Historical Price:"], L["Historical Price x%s:"], TSM:GetHistoricalPrice(itemString))
 	end
 
 	-- add global price info
 	for _, info in ipairs(TSM.GLOBAL_PRICE_INFO) do
 		if TSM.db.profile[info.tooltipKey] then
-			InsertValueText(info.tooltipText, info.tooltipText2, TSM:GetGlobalPrice(itemID, info.sourceArg))
+			TooltipInsertValueText(text, quantity, info.tooltipText, info.tooltipText2, TSM:GetGlobalPrice(itemString, info.sourceArg))
 		end
 	end
 
 	-- add heading and last scan time info
 	if #text > 0 then
-		local lastScan = TSM:GetLastScanTime(itemID)
+		local lastScan = TSM:GetLastScanTime(itemString)
 		if lastScan then
 			local timeDiff = SecondsToTime(time() - lastScan)
 			tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format(L["%s ago"], timeDiff) })
@@ -302,186 +256,11 @@ function TSM:GetTooltip(itemString, quantity)
 	end
 end
 
-function TSM:Reset()
-	-- Popup Confirmation Window used in this module
-	StaticPopupDialogs["TSMAuctionDBClearDataConfirm"] = StaticPopupDialogs["TSMAuctionDBClearDataConfirm"] or {
-		text = L["Are you sure you want to clear your AuctionDB data?"],
-		button1 = YES,
-		button2 = CANCEL,
-		timeout = 0,
-		whileDead = true,
-		hideOnEscape = true,
-		OnAccept = function()
-			TSM.db.realm.appDataUpdate = TSM.db.realm.appDataUpdate or 0
-			TSM.db.realm.lastCompleteScan = TSM.db.realm.appDataUpdate
-			for i in pairs(TSM.scanData) do
-				TSM.scanData[i] = nil
-			end
-			TSM:Print(L["Reset Data"])
-		end,
-		OnCancel = false,
-	}
-
-	StaticPopup_Show("TSMAuctionDBClearDataConfirm")
-	for i = 1, 10 do
-		local popup = _G["StaticPopup" .. i]
-		if popup and popup.which == "TSMAuctionDBClearDataConfirm" then
-			popup:SetFrameStrata("TOOLTIP")
-			break
-		end
-	end
-end
-
-local alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
-local base = #alpha
-local alphaTable = {}
-local alphaTableLookup = {}
-for i = 1, base do
-	local char = strsub(alpha, i, i)
-	tinsert(alphaTable, char)
-	alphaTableLookup[char] = i
-end
-
-local function decode(h)
-	if strfind(h, "~") then return end
-	local result = 0
-
-	local len = #h
-	for j = len - 1, 0, -1 do
-		if not alphaTableLookup[strsub(h, len - j, len - j)] then error(h .. " at index " .. len - j) end
-		result = result + (alphaTableLookup[strsub(h, len - j, len - j)] - 1) * (base ^ j)
-		j = j - 1
-	end
-
-	return result
-end
-
-local function encode(d)
-	d = tonumber(d)
-	if not d or not (d < math.huge and d > 0) then -- this cannot be simplified since 0/0 is neither less than nor greater than any number
-		return "~"
-	end
-
-	local r = d % base
-	local diff = d - r
-	if diff == 0 then
-		return alphaTable[r + 1]
-	else
-		return encode(diff / base) .. alphaTable[r + 1]
-	end
-end
-
-local function encodeScans(scans)
-	local tbl, tbl2 = {}, {}
-	for day, data in pairs(scans) do
-		if type(data) == "table" and data.count and data.avg then
-			data = encode(data.avg) .. "@" .. encode(data.count)
-		elseif type(data) == "table" then
-			-- Old method of encoding scans
-			for i = 1, #data do
-				tbl2[i] = encode(data[i])
-			end
-			data = table.concat(tbl2, ";", 1, #data)
-		else
-			data = encode(data)
-		end
-		tinsert(tbl, encode(day) .. ":" .. data)
-	end
-	return table.concat(tbl, "!")
-end
-
-local function decodeScans(rope)
-	if rope == "A" then return end
-	local scans = {}
-	local days = { ("!"):split(rope) }
-	local currentDay = TSM.Data:GetDay()
-	for _, data in ipairs(days) do
-		local day, marketValueData = (":"):split(data)
-		day = decode(day)
-		scans[day] = {}
-		if strfind(marketValueData, "@") then
-			local avg, count = ("@"):split(marketValueData)
-			avg = decode(avg)
-			count = decode(count)
-			if avg ~= "~" and count ~= "~" then
-				if abs(currentDay - day) <= TSM.MAX_AVG_DAY then
-					scans[day].avg = avg
-					scans[day].count = count
-				else
-					scans[day] = avg
-				end
-			end
-		else
-			-- Old method of decoding scans
-			for _, value in ipairs({ (";"):split(marketValueData) }) do
-				local decodedValue = decode(value)
-				if decodedValue ~= "~" then
-					tinsert(scans[day], tonumber(decodedValue))
-				end
-			end
-			if day ~= currentDay then
-				scans[day] = TSM.Data:GetAverage(scans[day])
-			end
-		end
-	end
-
-	return scans
-end
-
-function TSM:Serialize()
-	local results = {}
-	for itemID, data in pairs(TSM.scanData) do
-		if not data.encoded then
-			-- should never get here, but just in-case
-			TSM:EncodeItemData(itemID)
-		end
-		if data.encoded then
-			tinsert(results, "?" .. encode(itemID) .. "," .. data.encoded)
-		end
-	end
-	TSM.db.realm.scanData = table.concat(results)
-end
-
-function TSM:Deserialize(data, resultTbl, fullyDecode)
-	if strsub(data, 1, 1) ~= "?" then return end
-
-	for k, a, b, c, d, e, f in gmatch(data, "?([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^?]+)") do
-		local itemID = decode(k)
-		resultTbl[itemID] = { encoded = strjoin(",", a, b, c, d, e, f) }
-		if fullyDecode then
-			TSM:DecodeItemData(itemID, resultTbl)
-		end
-	end
-end
-
-function TSM:EncodeItemData(itemID, tbl)
-	tbl = tbl or TSM.scanData
-	local data = tbl[itemID]
-	if data and data.marketValue then
-		data.encoded = strjoin(",", encode(0), encode(data.marketValue), encode(data.lastScan), encode(0), encode(data.minBuyout), encodeScans(data.scans))
-	end
-end
-
-function TSM:DecodeItemData(itemID, tbl)
-	tbl = tbl or TSM.scanData
-	local data = tbl[itemID]
-	if data and data.encoded and not data.marketValue then
-		local a, b, c, d, e, f = (","):split(data.encoded)
-		data.marketValue = decode(b)
-		data.lastScan = decode(c)
-		data.minBuyout = decode(e)
-		data.scans = decodeScans(f)
-	end
-end
-
 function TSM:GetLastCompleteScan()
 	local lastScan = {}
-	for itemID, data in pairs(TSM.data) do
-		if TSM.data == TSM.scanData then
-			TSM:DecodeItemData(itemID)
-		end
-		if data.lastScan == TSM.db.realm.lastCompleteScan or (not data.lastScan and data.minBuyout) then
-			lastScan[itemID] = {marketValue=data.marketValue, minBuyout=data.minBuyout, numAuctions=TSM:GetNumAuctions(itemID)}
+	for itemString, data in pairs(TSM.realmData) do
+		if data.lastScan >= TSM.db.realm.lastCompleteScan and data.minBuyout then
+			lastScan[itemString] = {marketValue=data.marketValue, minBuyout=data.minBuyout, numAuctions=data.numAuctions}
 		end
 	end
 
@@ -492,75 +271,34 @@ function TSM:GetLastCompleteScanTime()
 	return TSM.db.realm.lastCompleteScan
 end
 
-function TSM:GetScans(link)
-	if not link then return end
-	link = select(2, GetItemInfo(link))
-	if not link then return end
-	local itemID = TSMAPI:GetItemID(link)
-	if not TSM.scanData[itemID] then return end
-	TSM:DecodeItemData(itemID)
-
-	return CopyTable(TSM.scanData[itemID].scans)
-end
-
-function TSM:GetMarketValue(itemID)
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	if TSM.data == TSM.scanData then
-		TSM:DecodeItemData(itemID)
-		if not TSM.scanData[itemID].marketValue or TSM.scanData[itemID].marketValue == 0 then
-			TSM.scanData[itemID].marketValue = TSM.Data:GetMarketValue(TSM.scanData[itemID].scans)
-		end
-	end
-	return TSM.data[itemID].marketValue ~= 0 and TSM.data[itemID].marketValue or nil
-end
-
-function TSM:GetGlobalPrice(itemID, key)
-	if TSM.data == TSM.scanData then return end
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	return TSM.data[itemID][key] and TSM.data[itemID][key] ~= 0 and TSM.data[itemID][key] or nil
-end
-
-function TSM:GetLastScanTime(itemID)
-	if TSM.data == TSM.scanData then
-		TSM:DecodeItemData(itemID)
-		return itemID and TSM.scanData[itemID].lastScan
+function TSM:GetItemData(itemString, key, isGlobal)
+	itemString = TSMAPI:GetBaseItemString2(itemString)
+	local scanData = nil
+	if isGlobal then
+		scanData = TSM.globalData
 	else
-		return TSM.db.realm.appDataUpdate
+		scanData = TSM.realmData
 	end
+	if not itemString or not scanData or not scanData[itemString] or not scanData[itemString][key] then return end
+	return scanData[itemString][key] > 0 and scanData[itemString][key] or nil
 end
 
-function TSM:GetMinBuyout(itemID)
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	if TSM.data == TSM.scanData then
-		TSM:DecodeItemData(itemID)
-	end
-	local minBuyout = TSM.data[itemID].minBuyout
-	return minBuyout and minBuyout > 0 and minBuyout or nil
+function TSM:GetMarketValue(itemString)
+	return TSM:GetItemData(itemString, "marketValue")
 end
 
-function TSM:GetHistoricalPrice(itemID)
-	if TSM.data == TSM.scanData then return end
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	return TSM.data[itemID].historical and TSM.data[itemID].historical ~= 0 and TSM.data[itemID].historical or nil
+function TSM:GetGlobalPrice(itemString, key)
+	return TSM:GetItemData(itemString, key, true)
 end
 
-function TSM:GetNumAuctions(itemID)
-	if TSM.data == TSM.scanData then return end
-	if itemID and not tonumber(itemID) then
-		itemID = TSMAPI:GetItemID(itemID)
-	end
-	if not itemID or not TSM.data[itemID] then return end
-	return TSM.data[itemID].numAuctions and TSM.data[itemID].numAuctions > 0 and TSM.data[itemID].numAuctions or nil
+function TSM:GetLastScanTime(itemString)
+	return TSM:GetItemData(itemString, "lastScan")
+end
+
+function TSM:GetMinBuyout(itemString)
+	return TSM:GetItemData(itemString, "minBuyout")
+end
+
+function TSM:GetHistoricalPrice(itemString)
+	return TSM:GetItemData(itemString, "historical")
 end

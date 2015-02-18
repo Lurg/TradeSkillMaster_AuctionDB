@@ -47,21 +47,20 @@ function Config:UpdateItems()
 	local fClass = filter.class and select(filter.class, GetAuctionItemClasses())
 	local fSubClass = filter.subClass and select(filter.subClass, GetAuctionItemSubClasses(filter.class))
 	if filter.text or fClass then
-		for itemID, data in pairs(TSM.data) do
-			TSM:DecodeItemData(itemID)
-			local name, _, rarity, ilvl, minlvl, class, subClass = GetItemInfo(itemID)
+		for itemString, data in pairs(TSM.realmData) do
+			local name, _, rarity, ilvl, minlvl, class, subClass = TSMAPI:GetSafeItemInfo(itemString)
 			if (name and filter.text and strfind(strlower(name), strlower(filter.text))) and (not fClass or (class == fClass and (not fSubClass or subClass == fSubClass))) and (not TSM.db.profile.hidePoorQualityItems or rarity > 0) then
-				tinsert(items, itemID)
+				tinsert(items, itemString)
 				if sortMethod == "name" then
-					cache[itemID] = name
+					cache[itemString] = name
 				elseif sortMethod == "ilvl" then
-					cache[itemID] = ilvl
+					cache[itemString] = ilvl
 				elseif sortMethod == "minlvl" then
-					cache[itemID] = minlvl
+					cache[itemString] = minlvl
 				elseif sortMethod == "marketvalue" then
-					cache[itemID] = data.marketValue
+					cache[itemString] = data.marketValue
 				elseif sortMethod == "minbuyout" then
-					cache[itemID] = data.minBuyout
+					cache[itemString] = data.minBuyout
 				end
 			end
 		end
@@ -131,8 +130,8 @@ function Config:LoadSearch(container)
 	
 	local lastScanInfo
 	if TSM.db.realm.lastCompleteScan > 0 then
-		if TSM.db.realm.lastCompleteScan == TSM.db.realm.appDataUpdate then
-			lastScanInfo = format(L["Last updated from the TSM Application %s ago."], SecondsToTime(time() - TSM.db.realm.appDataUpdate))
+		if TSM.db.realm.hasAppData then
+			lastScanInfo = format(L["Last updated from the TSM Application %s ago."], SecondsToTime(time() - TSM.db.realm.lastCompleteScan))
 		else
 			lastScanInfo = format(L["Last updated from in-game scan %s ago."], SecondsToTime(time() - TSM.db.realm.lastCompleteScan))
 		end
@@ -301,17 +300,9 @@ function Config:LoadSearch(container)
 			},
 		}
 		local handlers = {
-			OnClick = function(_, data, _, button)
-				if data and IsShiftKeyDown() and button == "RightButton" then
-					TSM.scanData[data.itemID] = nil
-					TSM:Printf(L["Removed %s from AuctionDB."], select(2, GetItemInfo(data.itemID)) or data.itemID)
-				end
-			end,
 			OnEnter = function(_, data, self)
 				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-				GameTooltip:SetHyperlink("item:" .. data.itemID)
-				GameTooltip:AddLine("\n")
-				GameTooltip:AddLine(TSMAPI.Design:GetInlineColor("link2") .. L["Shift-Right-Click to clear all data for this item from AuctionDB."] .. "|r")
+				TSMAPI:SafeTooltipLink(TSMAPI:GetItemString(data.itemString))
 				GameTooltip:Show()
 			end,
 			OnLeave = function()
@@ -340,11 +331,10 @@ function Config:GetSearchData()
 	local maxIndex = min(TSM.db.profile.resultsPerPage * (searchPage + 1), totalResults)
 	if totalResults > 0 then
 		for i = minIndex, maxIndex do
-			local itemID = items[i]
-			TSM:DecodeItemData(itemID)
-			local data = TSM.data[itemID]
+			local itemString = items[i]
+			local data = TSM.realmData[itemString]
 			local timeDiff = data.lastScan and SecondsToTime(time() - data.lastScan)
-			local name, link = GetItemInfo(itemID)
+			local name, link = TSMAPI:GetSafeItemInfo(itemString)
 			tinsert(stData, {
 				cols = {
 					{
@@ -364,7 +354,7 @@ function Config:GetSearchData()
 						sortArg = data.lastScan and (time() - data.lastScan) or 0,
 					},
 				},
-				itemID = itemID,
+				itemString = itemString,
 			})
 		end
 	end
