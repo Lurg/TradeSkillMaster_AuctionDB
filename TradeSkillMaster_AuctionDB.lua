@@ -51,6 +51,14 @@ TSM.GLOBAL_PRICE_INFO = {
 	},
 }
 
+StaticPopupDialogs["TSM_AUCTIONDB_NO_DATA_POPUP"] = {
+	text = "|cffff0000WARNING:|r TSM_AuctionDB doesn't currently have any pricing data for your realm. Either download the TSM Desktop Application from |cff99ffffhttp://tradeskillmaster.com|r to automatically update TSM_AuctionDB's data, or run a manual scan in-game.",
+	button1 = OKAY,
+	timeout = 0,
+	hideOnEscape = false,
+	preferredIndex = 3,
+}
+
 local savedDBDefaults = {
 	realm = {
 		lastSaveTime = nil,
@@ -189,6 +197,9 @@ function TSM:OnEnable()
 	TSMAuctionDB_LoadAppData = nil
 	for itemString in pairs(TSM.realmData) do
 		TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemString))
+	end
+	if not next(TSM.realmData) then
+		TSMAPI:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
 	end
 end
 
