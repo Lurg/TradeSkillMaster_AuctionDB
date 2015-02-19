@@ -257,6 +257,7 @@ end
 
 function private:ProcessScanDataThread(self, scanData, itemList)
 	local scanTime = time()
+	TSM.db.realm.lastPartialScan = scanTime
 	
 	local scannedItems = nil
 	if itemList then
@@ -283,6 +284,7 @@ function private:ProcessScanDataThread(self, scanData, itemList)
 	for itemString, data in pairs(scanData) do
 		itemString = TSMAPI:GetBaseItemString2(itemString)
 		if TSM.db.realm.hasAppData and TSM.realmData[itemString] then
+			-- if we have data from the app, just update the minBuyout/numAuctions/lastScan
 			TSM.realmData[itemString].minBuyout = data.minBuyout
 			TSM.realmData[itemString].numAuctions = data.numAuctions
 			TSM.realmData[itemString].lastScan = scanTime

@@ -56,6 +56,7 @@ local savedDBDefaults = {
 		lastSaveTime = nil,
 		scanData = "",
 		lastCompleteScan = 0,
+		lastPartialScan = 0,
 		hasAppData = nil,
 	},
 	global = {
@@ -139,7 +140,7 @@ end
 function TSM:OnEnable()
 	-- check if we can load realm data from the app
 	local realmAppData = TSM.AppData and TSM.AppData.realm
-	if realmAppData and realmAppData.downloadTime >= TSM.db.realm.lastCompleteScan then
+	if realmAppData and (realmAppData.downloadTime > TSM.db.realm.lastCompleteScan or (realmAppData.downloadTime == TSM.db.realm.lastCompleteScan and realmAppData.downloadTime > TSM.db.realm.lastPartialScan)) then
 		TSM.updatedRealmData = (realmAppData.downloadTime > TSM.db.realm.lastCompleteScan)
 		TSM.db.realm.lastCompleteScan = realmAppData.downloadTime
 		TSM.db.realm.hasAppData = true
