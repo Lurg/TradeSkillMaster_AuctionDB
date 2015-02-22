@@ -28,7 +28,6 @@ end
 function GUI:Hide()
 	private.frame:Hide()
 	TSM.Scan:StopScanning()
-	TSMAPI.AuctionScan:StopScan()
 	TSMAPI:CancelFrame("auctionDBGetAllStatus")
 end
 
