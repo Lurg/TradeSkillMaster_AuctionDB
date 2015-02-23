@@ -80,6 +80,7 @@ local savedDBDefaults = {
 		marketValueTooltip = true,
 		minBuyoutTooltip = true,
 		historicalPriceTooltip = true,
+		numAuctionsTooltip = true,
 		globalMarketValueAvgTooltip = true,
 		globalMinBuyoutAvgTooltip = true,
 		globalSaleAvgTooltip = true,
@@ -260,7 +261,12 @@ function TSM:GetTooltip(itemString, quantity)
 		local lastScan = TSM:GetLastScanTime(itemString)
 		if lastScan then
 			local timeDiff = SecondsToTime(time() - lastScan)
-			tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format(L["%s ago"], timeDiff) })
+			local numAuctions = TSM:GetItemData(itemString, "numAuctions")
+			if numAuctions and TSM.db.profile.numAuctionsTooltip then
+				tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format("%s auctions (%s ago)", numAuctions, timeDiff) })
+			else
+				tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format(L["%s ago"], timeDiff) })
+			end
 		else
 			tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. L["Not Scanned"] })
 		end

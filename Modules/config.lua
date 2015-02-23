@@ -475,6 +475,14 @@ function Config:LoadTooltipOptions(container)
 				},
 				{
 					type = "CheckBox",
+					label = "Display number of auctions in tooltip.",
+					relativeWidth = 1,
+					disabled = not TSM.db.profile.tooltip,
+					settingInfo = { TSM.db.profile, "numAuctionsTooltip" },
+					tooltip = "If checked, the current number of auctions for the item will be displayed.",
+				},
+				{
+					type = "CheckBox",
 					label = L["Display historical price (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
 					disabled = not TSM.db.profile.tooltip,
