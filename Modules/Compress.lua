@@ -87,7 +87,7 @@ local function DecodeScanData(rawData, keys, saveTime)
 				if not strmatch(subPart, ":") then
 					itemString = "i:"..DecodeInt(subPart)
 				else
-					itemString = strsub(str, 1, 1)..gsub(strsub(str, 2), "([0-9a-zA-Z_=]+)", DecodeInt)
+					itemString = strsub(subPart, 1, 1)..gsub(strsub(subPart, 2), "([0-9a-zA-Z_=]+)", DecodeInt)
 				end
 			elseif key == "lastScan" then
 				temp[key] = saveTime - DecodeInt(subPart)
