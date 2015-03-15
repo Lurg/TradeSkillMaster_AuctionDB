@@ -22,17 +22,17 @@ local MAX_JUMP = 1.2 -- between the min and max percentiles, any increase in pri
 -- Module Functions
 -- ============================================================================
 
-function Scan:StartFullScan2()
+function Scan:StartFullScan()
 	Scan:StopScanning()
 	private.threadId = TSMAPI.Threading:Start(private.FullScanThread, 0.7, Scan.StopScanning)
 end
 
-function Scan:StartGroupScan2(itemList)
+function Scan:StartGroupScan(itemList)
 	Scan:StopScanning()
 	private.threadId = TSMAPI.Threading:Start(private.GroupScanThread, 0.7, Scan.StopScanning, itemList)
 end
 
-function Scan:StartGetAllScan2()
+function Scan:StartGetAllScan()
 	Scan:StopScanning()
 	private.threadId = TSMAPI.Threading:Start(private.GetAllScanThread, 0.7, Scan.StopScanning)
 end

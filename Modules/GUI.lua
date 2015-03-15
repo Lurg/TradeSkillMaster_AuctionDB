@@ -162,10 +162,10 @@ function private:Create(parent)
 			content = {
 				buttonFrame = {
 					getAllBtn = {
-						OnClick = TSM.Scan.StartGetAllScan2,
+						OnClick = TSM.Scan.StartGetAllScan,
 					},
 					fullBtn = {
-						OnClick = TSM.Scan.StartFullScan2,
+						OnClick = TSM.Scan.StartFullScan,
 					},
 					groupBtn = {
 						OnClick = function()
@@ -179,7 +179,7 @@ function private:Create(parent)
 									end
 								end
 							end
-							TSM.Scan:StartGroupScan2(items)
+							TSM.Scan:StartGroupScan(items)
 						end,
 					},
 				},
