@@ -442,6 +442,7 @@ function Config:LoadOptions(container)
 end
 
 function Config:LoadTooltipOptions(container)
+	local tooltipOptions = TSMAPI.Tooltip:GetModuleOptions("AuctionDB")
 	local page = {
 		{
 			type = "SimpleGroup",
@@ -450,75 +451,52 @@ function Config:LoadTooltipOptions(container)
 			children = {
 				{
 					type = "CheckBox",
-					label = L["Enable display of AuctionDB data in tooltip."],
-					relativeWidth = 1,
-					settingInfo = { TSM.db.profile, "tooltip" },
-					callback = function(_, _, value)
-						container:ReloadTab()
-					end,
-				},
-				{
-					type = "CheckBox",
-					label = L["Display lowest buyout value seen in the last scan in tooltip."],
-					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "minBuyoutTooltip" },
+					label = "Display min buyout in tooltip.",
+					settingInfo = { tooltipOptions, "minBuyout" },
 					tooltip = L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display market value in tooltip."],
-					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "marketValueTooltip" },
+					settingInfo = { tooltipOptions, "marketValue" },
 					tooltip = L["If checked, the market value of the item will be displayed"],
 				},
 				{
-					type = "CheckBox",
-					label = "Display number of auctions in tooltip.",
-					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "numAuctionsTooltip" },
-					tooltip = "If checked, the current number of auctions for the item will be displayed.",
+					type = "HeadingLine",
 				},
 				{
 					type = "CheckBox",
 					label = L["Display historical price (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "historicalPriceTooltip" },
+					settingInfo = { tooltipOptions, "historicalPrice" },
 					tooltip = L["If checked, the historical price of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global market value avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "globalMarketValueAvgTooltip" },
+					settingInfo = { tooltipOptions, "globalMarketValue" },
 					tooltip = L["If checked, the global market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global min buyout avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "globalMinBuyoutAvgTooltip" },
+					settingInfo = { tooltipOptions, "globalMinBuyout" },
 					tooltip = L["If checked, the global minimum buyout average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global sale avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "globalSaleAvgTooltip" },
+					settingInfo = { tooltipOptions, "globalSale" },
 					tooltip = L["If checked, the global sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global historical price (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					disabled = not TSM.db.profile.tooltip,
-					settingInfo = { TSM.db.profile, "globalHistoricalPriceTooltip" },
+					settingInfo = { tooltipOptions, "globalHistorical" },
 					tooltip = L["If checked, the global historical price of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 			},

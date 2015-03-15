@@ -16,41 +16,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- lo
 TSM.MAX_AVG_DAY = 1
 local SECONDS_PER_DAY = 60 * 60 * 24
 
-TSM.GLOBAL_PRICE_INFO = {
-	{
-		source = "DBGlobalMinBuyoutAvg",
-		sourceLabel = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"],
-		sourceArg = "globalMinBuyout",
-		tooltipText = L["Global Min Buyout Avg:"],
-		tooltipText2 = L["Global Min Buyout Avg x%s:"],
-		tooltipKey = "globalMinBuyoutAvgTooltip",
-	},
-	{
-		source = "DBGlobalMarketAvg",
-		sourceLabel = L["AuctionDB - Global Market Value Average (via TSM App)"],
-		sourceArg = "globalMarketValue",
-		tooltipText = L["Global Market Value Avg:"],
-		tooltipText2 = L["Global Market Value Avg x%s:"],
-		tooltipKey = "globalMarketValueAvgTooltip",
-	},
-	{
-		source = "DBGlobalHistorical",
-		sourceLabel = L["AuctionDB - Global Historical Price (via TSM App)"],
-		sourceArg = "globalHistorical",
-		tooltipText = L["Global Historical Price:"],
-		tooltipText2 = L["Global Historical Price x%s:"],
-		tooltipKey = "globalHistoricalPriceTooltip",
-	},
-	{
-		source = "DBGlobalSaleAvg",
-		sourceLabel = L["AuctionDB - Global Sale Average (via TSM App)"],
-		sourceArg = "globalSale",
-		tooltipText = L["Global Sale Average:"],
-		tooltipText2 = L["Global Sale Average x%s:"],
-		tooltipKey = "globalSaleAvgTooltip",
-	},
-}
-
 StaticPopupDialogs["TSM_AUCTIONDB_NO_DATA_POPUP"] = {
 	text = "|cffff0000WARNING:|r TSM_AuctionDB doesn't currently have any pricing data for your realm. Either download the TSM Desktop Application from |cff99ffffhttp://tradeskillmaster.com|r to automatically update TSM_AuctionDB's data, or run a manual scan in-game.",
 	button1 = OKAY,
@@ -72,30 +37,16 @@ local savedDBDefaults = {
 		lastUpdate = 0,
 	},
 	profile = {
-		tooltip = true,
 		resultsPerPage = 50,
 		resultsSortOrder = "ascending",
 		resultsSortMethod = "name",
 		hidePoorQualityItems = true,
-		marketValueTooltip = true,
-		minBuyoutTooltip = true,
-		historicalPriceTooltip = true,
-		numAuctionsTooltip = true,
-		globalMarketValueAvgTooltip = true,
-		globalMinBuyoutAvgTooltip = true,
-		globalSaleAvgTooltip = true,
-		globalHistoricalPriceTooltip = true,
 		showAHTab = true,
 	},
 }
 
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
-	-- just blow away old factionrealm data for 6.0.1
-	if TradeSkillMaster_AuctionDBDB and TradeSkillMaster_AuctionDBDB.factionrealm then
-		TradeSkillMaster_AuctionDBDB.factionrealm = nil
-	end
-
 	-- load the savedDB into TSM.db
 	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
 
@@ -116,11 +67,13 @@ function TSM:RegisterModule()
 	TSM.priceSources = {
 		{ key = "DBMarket", label = L["AuctionDB - Market Value"], callback = "GetMarketValue", takeItemString = true },
 		{ key = "DBMinBuyout", label = L["AuctionDB - Minimum Buyout"], callback = "GetMinBuyout", takeItemString = true },
+		-- prices from the app
 		{ key = "DBHistorical", label = L["AuctionDB - Historical Price (via TSM App)"], callback = "GetHistoricalPrice", takeItemString = true },
+		{ key = "DBGlobalMinBuyoutAvg", label = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"], callback = "GetGlobalPrice", arg = "globalMinBuyout", takeItemString = true },
+		{ key = "DBGlobalMarketAvg", label = L["AuctionDB - Global Market Value Average (via TSM App)"], callback = "GetGlobalPrice", arg = "globalMarketValue", takeItemString = true },
+		{ key = "DBGlobalHistorical", label = L["AuctionDB - Global Historical Price (via TSM App)"], callback = "GetGlobalPrice", arg = "globalHistorical", takeItemString = true },
+		{ key = "DBGlobalSaleAvg", label = L["AuctionDB - Global Sale Average (via TSM App)"], callback = "GetGlobalPrice", arg = "globalSale", takeItemString = true },
 	}
-	for _, info in pairs(TSM.GLOBAL_PRICE_INFO) do
-		tinsert(TSM.priceSources, { key = info.source, label = info.sourceLabel, callback = "GetGlobalPrice", arg = info.sourceArg, takeItemString = true })
-	end
 	TSM.icons = {
 		{ side = "module", desc = "AuctionDB", slashCommand = "auctiondb", callback = "Config:Load", icon = "Interface\\Icons\\Inv_Misc_Platnumdisks" },
 	}
@@ -132,6 +85,15 @@ function TSM:RegisterModule()
 		{ key = "lastCompleteScanTime", callback = TSM.GetLastCompleteScanTime },
 	}
 	TSM.tooltipOptions = { callback = "Config:LoadTooltipOptions" }
+	TSM.tooltipDefaults = {
+		minBuyout = true,
+		marketValue = true,
+		historicalPrice = false,
+		globalMinBuyout = false,
+		globalMarketValue = true,
+		globalHistorical = false,
+		globalSale = true,
+	}
 	TSMAPI:NewModule(TSM)
 end
 
@@ -227,33 +189,46 @@ local function TooltipInsertValueText(text, quantity, str, strAlt, value)
 end
 
 function TSM:GetTooltip(itemString, quantity)
-	if not TSM.db.profile.tooltip then return end
 	itemString = TSMAPI:GetBaseItemString2(itemString)
 	if not itemString then return end
 	
+	local tooltipOptions = TSMAPI.Tooltip:GetModuleOptions("AuctionDB")
 	local text = {}
 	quantity = quantity or 1
 
 	-- add min buyout info
-	if TSM.db.profile.minBuyoutTooltip then
+	if tooltipOptions.minBuyout then
 		TooltipInsertValueText(text, quantity, L["Min Buyout:"], L["Min Buyout x%s:"], TSM:GetMinBuyout(itemString))
 	end
 
 	-- add market value info
-	if TSM.db.profile.marketValueTooltip then
+	if tooltipOptions.marketValue then
 		TooltipInsertValueText(text, quantity, L["Market Value:"], L["Market Value x%s:"], TSM:GetMarketValue(itemString))
 	end
 
 	-- add historical price info
-	if TSM.db.profile.historicalPriceTooltip then
+	if tooltipOptions.historicalPrice then
 		TooltipInsertValueText(text, quantity, L["Historical Price:"], L["Historical Price x%s:"], TSM:GetHistoricalPrice(itemString))
 	end
 
-	-- add global price info
-	for _, info in ipairs(TSM.GLOBAL_PRICE_INFO) do
-		if TSM.db.profile[info.tooltipKey] then
-			TooltipInsertValueText(text, quantity, info.tooltipText, info.tooltipText2, TSM:GetGlobalPrice(itemString, info.sourceArg))
-		end
+	-- add global min buyout info
+	if tooltipOptions.globalMinBuyout then
+		TooltipInsertValueText(text, quantity, L["Global Min Buyout Avg:"], L["Global Min Buyout Avg x%s:"], TSM:GetGlobalPrice(itemString, "globalMinBuyout"))
+	end
+
+	-- add global market value info
+	if tooltipOptions.globalMarketValue then
+		TooltipInsertValueText(text, quantity, L["Global Market Value Avg:"], L["Global Market Value Avg x%s:"], TSM:GetGlobalPrice(itemString, "globalMarketValue"))
+	end
+
+	-- add global historical price info
+	if tooltipOptions.globalHistorical then
+		TooltipInsertValueText(text, quantity, L["Global Historical Price:"], L["Global Historical Price x%s:"], TSM:GetGlobalPrice(itemString, "globalHistorical"))
+	end
+
+	-- add global sale avg info
+	if tooltipOptions.globalSale then
+		TooltipInsertValueText(text, quantity, "Global Sale Avg:", "Global Sale Avg x%s:", TSM:GetGlobalPrice(itemString, "globalSale"))
 	end
 
 	-- add heading and last scan time info
@@ -261,12 +236,8 @@ function TSM:GetTooltip(itemString, quantity)
 		local lastScan = TSM:GetLastScanTime(itemString)
 		if lastScan then
 			local timeDiff = SecondsToTime(time() - lastScan)
-			local numAuctions = TSM:GetItemData(itemString, "numAuctions")
-			if numAuctions and TSM.db.profile.numAuctionsTooltip then
-				tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format("%s auctions (%s ago)", numAuctions, timeDiff) })
-			else
-				tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format(L["%s ago"], timeDiff) })
-			end
+			local numAuctions = TSM:GetItemData(itemString, "numAuctions") or 0
+			tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. format("%s auctions (%s ago)", numAuctions, timeDiff) })
 		else
 			tinsert(text, 1, { left = "|cffffff00" .. "TSM AuctionDB:", right = "|cffffffff" .. L["Not Scanned"] })
 		end
