@@ -441,8 +441,7 @@ function Config:LoadOptions(container)
 	TSMAPI:BuildPage(container, page)
 end
 
-function Config:LoadTooltipOptions(container)
-	local tooltipOptions = TSMAPI.Tooltip:GetModuleOptions("AuctionDB")
+function Config:LoadTooltipOptions(container, options)
 	local page = {
 		{
 			type = "SimpleGroup",
@@ -452,13 +451,13 @@ function Config:LoadTooltipOptions(container)
 				{
 					type = "CheckBox",
 					label = "Display min buyout in tooltip.",
-					settingInfo = { tooltipOptions, "minBuyout" },
+					settingInfo = { options, "minBuyout" },
 					tooltip = L["If checked, the lowest buyout value seen in the last scan of the item will be displayed."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display market value in tooltip."],
-					settingInfo = { tooltipOptions, "marketValue" },
+					settingInfo = { options, "marketValue" },
 					tooltip = L["If checked, the market value of the item will be displayed"],
 				},
 				{
@@ -468,35 +467,35 @@ function Config:LoadTooltipOptions(container)
 					type = "CheckBox",
 					label = L["Display historical price (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					settingInfo = { tooltipOptions, "historicalPrice" },
+					settingInfo = { options, "historical" },
 					tooltip = L["If checked, the historical price of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global market value avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					settingInfo = { tooltipOptions, "globalMarketValue" },
+					settingInfo = { options, "globalMarketValue" },
 					tooltip = L["If checked, the global market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global min buyout avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					settingInfo = { tooltipOptions, "globalMinBuyout" },
+					settingInfo = { options, "globalMinBuyout" },
 					tooltip = L["If checked, the global minimum buyout average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global sale avg (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					settingInfo = { tooltipOptions, "globalSale" },
+					settingInfo = { options, "globalSale" },
 					tooltip = L["If checked, the global sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
 					label = L["Display global historical price (via TSM Application) in the tooltip."],
 					relativeWidth = 1,
-					settingInfo = { tooltipOptions, "globalHistorical" },
+					settingInfo = { options, "globalHistorical" },
 					tooltip = L["If checked, the global historical price of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 			},
