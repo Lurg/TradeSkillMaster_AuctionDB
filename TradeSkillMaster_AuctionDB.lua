@@ -34,6 +34,7 @@ local savedDBDefaults = {
 	global = {
 		scanData = "",
 		lastUpdate = 0,
+		helpPlatesShown = {auction=nil},
 	},
 	profile = {
 		resultsPerPage = 50,
