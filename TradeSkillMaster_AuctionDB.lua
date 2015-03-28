@@ -15,6 +15,13 @@ local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- lo
 
 TSM.MAX_AVG_DAY = 1
 local SECONDS_PER_DAY = 60 * 60 * 24
+StaticPopupDialogs["TSM_AUCTIONDB_APP_HELPER_INFO"] = {
+	text = "|cffff0000Important:|r If you are using the TSM Desktop Application, you now need to install the TSM_AppHelper module to ensure your AuctionDB/WoWuction data continues to be updated.",
+	button1 = OKAY,
+	timeout = 0,
+	hideOnEscape = false,
+	preferredIndex = 3,
+}
 
 TSM.GLOBAL_PRICE_INFO = {
 	{
@@ -72,6 +79,7 @@ local savedDBDefaults = {
 		globalSaleAvgTooltip = true,
 		globalHistoricalPriceTooltip = true,
 		showAHTab = true,
+		appHelperNoticeShown = false,
 	},
 }
 
@@ -96,6 +104,11 @@ function TSM:OnInitialize()
 	TSM.scanData = {}
 	TSM.data = TSM.scanData
 	TSM:Deserialize(TSM.db.realm.scanData, TSM.scanData)
+	
+	if select(4, GetAddOnInfo("TradeSkillMaster_AppHelper")) and not TSM.db.realm.appHelperNoticeShown and TSM.db.realm.appDataUpdate > 0 then
+		TSMAPI:ShowStaticPopupDialog("TSM_AUCTIONDB_APP_HELPER_INFO")
+		TSM.db.realm.appHelperNoticeShown = true
+	end
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -164,26 +177,96 @@ function TSM:LoadAuctionData()
 	TSMAPI.Threading:Start(LoadDataThread, 0.1, nil, itemIDs)
 end
 
-function TSMAuctionDB_LoadAppData(index, dataStr)
-	if index ~= "Global" and gsub(index, "’", "'") ~= gsub(GetRealmName(), "’", "'") then return end
-	local data = assert(loadstring(dataStr))()
-	TSM.AppData = TSM.AppData or {}
-	if index == "Global" then
-		TSM.AppData.global = data
+
+function TSM:OnEnable()
+	local realmAppData, globalAppData
+	local appData = TSMAPI.AppHelper and TSMAPI.AppHelper:FetchData("AUCTIONDB_MARKET_DATA") -- get app data from TSM_AppHelper if it's installed
+	if appData then
+		for _, info in ipairs(appData) do
+			local realm, data = unpack(info)
+			if realm == "Global" then
+				globalAppData = assert(loadstring(data))()
+			elseif TSMAPI.AppHelper:IsCurrentRealm(realm) then
+				realmAppData = assert(loadstring(data))()
+			end
+		end
+	end
+
+	-- check if we can load realm data from the app
+	if realmAppData and (realmAppData.downloadTime > TSM.db.realm.lastCompleteScan or (realmAppData.downloadTime == TSM.db.realm.lastCompleteScan and realmAppData.downloadTime > TSM.db.realm.lastPartialScan)) then
+		TSM.updatedRealmData = (realmAppData.downloadTime > TSM.db.realm.lastCompleteScan)
+		TSM.db.realm.lastCompleteScan = realmAppData.downloadTime
+		TSM.db.realm.hasAppData = true
+		TSM.realmData = {}
+		local fields = realmAppData.fields
+		for _, data in ipairs(realmAppData.data) do
+			local itemString
+			for i, key in ipairs(fields) do
+				if i == 1 then
+					-- item string must be the first field
+					itemString = TSMAPI:GetBaseItemString2(data[i])
+					TSM.realmData[itemString] = {}
+				else
+					TSM.realmData[itemString][key] = data[i]
+				end
+			end
+			TSM.realmData[itemString].lastScan = realmAppData.downloadTime
+		end
 	else
-		TSM.AppData.realm = data
+		TSM.Compress:LoadRealmData()
+	end
+	
+	-- check if we can load global data from the app
+	if globalAppData and globalAppData.downloadTime >= TSM.db.global.lastUpdate then
+		TSM.updatedGlobalData = (globalAppData.downloadTime > TSM.db.global.lastUpdate)
+		TSM.db.global.lastUpdate = globalAppData.downloadTime
+		TSM.globalData = {}
+		local fields = globalAppData.fields
+		for _, data in ipairs(globalAppData.data) do
+			local itemString
+			for i, key in ipairs(fields) do
+				if i == 1 then
+					-- item string must be the first field
+					itemString = TSMAPI:GetBaseItemString2(data[i])
+					TSM.globalData[itemString] = {}
+				else
+					TSM.globalData[itemString][key] = data[i]
+				end
+			end
+		end
+	else
+		TSM.Compress:LoadGlobalData()
+	end
+	
+	for itemString in pairs(TSM.realmData) do
+		TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemString))
+	end
+	if not next(TSM.realmData) then
+		TSMAPI:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
 	end
 end
 
 function TSM:OnEnable()
-	TSMAuctionDB_LoadAppData = nil
-	if TSM.AppData then
-		if TSM.AppData.realm then
-			TSM.db.realm.appDataUpdate = TSM.AppData.realm.downloadTime
-			TSM.db.realm.lastCompleteScan = TSM.AppData.realm.downloadTime
-			local fields = TSM.AppData.realm.fields
+	local realmAppData, globalAppData
+	local appData = TSMAPI.AppHelper and TSMAPI.AppHelper:FetchData("AUCTIONDB_MARKET_DATA") -- get app data from TSM_AppHelper if it's installed
+	if appData then
+		for _, info in ipairs(appData) do
+			local realm, data = unpack(info)
+			if realm == "Global" then
+				globalAppData = assert(loadstring(data))()
+			elseif TSMAPI.AppHelper:IsCurrentRealm(realm) then
+				realmAppData = assert(loadstring(data))()
+			end
+		end
+	end
+	
+	if realmAppData or globalAppData then
+		if realmAppData then
+			TSM.db.realm.appDataUpdate = realmAppData.downloadTime
+			TSM.db.realm.lastCompleteScan = realmAppData.downloadTime
+			local fields = realmAppData.fields
 			TSM.appData = {}
-			for _, data in ipairs(TSM.AppData.realm.data) do
+			for _, data in ipairs(realmAppData.data) do
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
@@ -201,10 +284,10 @@ function TSM:OnEnable()
 			end
 			TSM.data = TSM.appData
 		end
-		if TSM.AppData.global then
-			local fields = TSM.AppData.global.fields
+		if globalAppData then
+			local fields = globalAppData.fields
 			TSM.appData = TSM.appData or {}
-			for _, data in ipairs(TSM.AppData.global.data) do
+			for _, data in ipairs(globalAppData.data) do
 				local temp = {}
 				local itemID
 				for i, key in ipairs(fields) do
@@ -225,7 +308,6 @@ function TSM:OnEnable()
 			end
 			TSM.data = TSM.appData
 		end
-		TSM.AppData = nil
 	end
 	if TSM.appData then
 		TSM.scanData = {}
