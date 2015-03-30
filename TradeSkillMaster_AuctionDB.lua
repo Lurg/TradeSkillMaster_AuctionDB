@@ -37,10 +37,6 @@ local savedDBDefaults = {
 		helpPlatesShown = {auction=nil},
 	},
 	profile = {
-		resultsPerPage = 50,
-		resultsSortOrder = "ascending",
-		resultsSortMethod = "name",
-		hidePoorQualityItems = true,
 		showAHTab = true,
 	},
 }
