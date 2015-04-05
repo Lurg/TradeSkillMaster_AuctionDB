@@ -146,7 +146,11 @@ function TSM:OnEnable()
 			for i, key in ipairs(fields) do
 				if i == 1 then
 					-- item string must be the first field
-					itemString = TSMAPI:GetBaseItemString2(data[i])
+					if data[i] < 0 then
+						itemString = "p:"..(-data[i])
+					else
+						itemString = "i:"..data[i]
+					end
 					TSM.globalData[itemString] = {}
 				else
 					TSM.globalData[itemString][key] = data[i]
