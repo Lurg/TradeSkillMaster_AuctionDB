@@ -192,7 +192,7 @@ local function InsertTooltipValueLine(itemString, quantity, key, lines, moneyCoi
 	TSMAPI:Assert(strings, "Could not find tooltip strings for :"..tostring(key))
 	
 	local leftStr = "  "..(quantity > 1 and format(strings[2], quantity) or strings[1])
-	local rightStr = TSMAPI:FormatMoney(moneyCoins, value*quantity, "|cffffffff", true)
+	local rightStr = TSMAPI:MoneyToString(value*quantity, "|cffffffff", "OPT_PAD", moneyCoins and "OPT_ICON" or nil)
 	tinsert(lines, {left=leftStr, right=rightStr})
 end
 
