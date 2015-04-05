@@ -22,13 +22,13 @@ function GUI:Show(frame)
 	private:Create(frame)
 	private.frame:Show()
 	GUI:UpdateStatus("", 0, 0)
-	TSMAPI:CreateTimeDelay("auctionDBGetAllStatus", 0, private.UpdateGetAllStatus, 0.2)
+	TSMAPI.Delay:AfterTime("auctionDBGetAllStatus", 0, private.UpdateGetAllStatus, 0.2)
 end
 
 function GUI:Hide()
 	private.frame:Hide()
 	TSM.Scan:StopScanning()
-	TSMAPI:CancelFrame("auctionDBGetAllStatus")
+	TSMAPI.Delay:Cancel("auctionDBGetAllStatus")
 end
 
 function GUI:UpdateStatus(text, major, minor)
