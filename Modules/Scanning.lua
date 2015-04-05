@@ -56,8 +56,8 @@ function private.FullScanThread(self)
 	self:SetThreadName("AUCTIONDB_FULL_SCAN")
 	TSM.GUI:UpdateStatus(L["Running query..."], 0, 0)
 	
-	local database = TSMAPI.AuctionScan:NewDatabase()
-	TSMAPI.AuctionScan:ScanQuery("AuctionDB", {name=""}, self:GetSendMsgToSelfCallback(), nil, database)
+	local database = TSMAPI.Auction:NewDatabase()
+	TSMAPI.Auction:ScanQuery("AuctionDB", {name=""}, self:GetSendMsgToSelfCallback(), nil, database)
 	local startTime = time()
 	while true do
 		local args = self:ReceiveMsg()
@@ -110,7 +110,7 @@ function private.GroupScanThread(self, itemList)
 	
 	-- generate queries
 	TSM.GUI:UpdateStatus(L["Preparing Filters..."], 0, 0)
-	TSMAPI:GenerateQueries(itemList, self:GetSendMsgToSelfCallback())
+	TSMAPI.Auction:GenerateQueries(itemList, self:GetSendMsgToSelfCallback())
 	local queries = nil
 	while true do
 		local args = self:ReceiveMsg()
@@ -131,10 +131,10 @@ function private.GroupScanThread(self, itemList)
 	-- scan queries
 	TSM.GUI:UpdateStatus(L["Running query..."])
 	local numQueries = #queries
-	local database = TSMAPI.AuctionScan:NewDatabase()
+	local database = TSMAPI.Auction:NewDatabase()
 	for i=1, numQueries do
 		TSM.GUI:UpdateStatus(format(L["Scanning %d / %d (Page %d / %d)"], i, numQueries, 1, 1), (i-1)*100/numQueries, 0)
-		TSMAPI.AuctionScan:ScanQuery("AuctionDB", queries[i], self:GetSendMsgToSelfCallback(), nil, database)
+		TSMAPI.Auction:ScanQuery("AuctionDB", queries[i], self:GetSendMsgToSelfCallback(), nil, database)
 		while true do
 			local args = self:ReceiveMsg()
 			local event = tremove(args, 1)
@@ -178,7 +178,7 @@ end
 
 function private.GetAllScanThread(self)
 	self:SetThreadName("AUCTIONDB_GETALL_SCAN")
-	TSMAPI.AuctionScan:GetAllScan("AuctionDB", self:GetSendMsgToSelfCallback())
+	TSMAPI.Auction:GetAllScan("AuctionDB", self:GetSendMsgToSelfCallback())
 	local scanData = nil
 	while true do
 		local args = self:ReceiveMsg()

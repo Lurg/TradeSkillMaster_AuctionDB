@@ -51,7 +51,7 @@ function private:Create(parent)
 	local function UpdateGetAllButton()
 	end
 	
-	local BFC = TSMAPI:GetBuildFrameConstants()
+	local BFC = TSMAPI.GUI:GetBuildFrameConstants()
 	local frameInfo = {
 		type = "Frame",
 		parent = parent,
@@ -186,7 +186,7 @@ function private:Create(parent)
 			},
 		},
 	}
-	private.frame = TSMAPI:BuildFrame(frameInfo)
+	private.frame = TSMAPI.GUI:BuildFrame(frameInfo)
 	TSMAPI.Design:SetFrameBackdropColor(private.frame.content)
 	private.frame.statusBar = private.frame.content.statusBar
 	

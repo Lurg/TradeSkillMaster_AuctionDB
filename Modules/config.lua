@@ -79,7 +79,7 @@ function Config:LoadOptions(container)
 		},
 	}
 
-	TSMAPI:BuildPage(container, page)
+	TSMAPI.GUI:BuildOptions(container, page)
 end
 
 function Config:LoadTooltipOptions(container, options)
@@ -143,5 +143,5 @@ function Config:LoadTooltipOptions(container, options)
 		},
 	}
 
-	TSMAPI:BuildPage(container, page)
+	TSMAPI.GUI:BuildOptions(container, page)
 end
