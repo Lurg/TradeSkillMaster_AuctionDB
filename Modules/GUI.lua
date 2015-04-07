@@ -172,7 +172,7 @@ function private:Create(parent)
 							local items, includedItems = {}, {}
 							for _, data in pairs(private.frame.content.groupTree:GetSelectedGroupInfo()) do
 								for itemString in pairs(data.items) do
-									itemString = TSMAPI:GetBaseItemString(itemString)
+									itemString = TSMAPI.Item:ToBaseItemString(itemString)
 									if not includedItems[itemString] then
 										includedItems[itemString] = true
 										tinsert(items, itemString)

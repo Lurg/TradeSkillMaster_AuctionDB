@@ -162,7 +162,7 @@ function TSM:OnEnable()
 	end
 	
 	for itemString in pairs(TSM.realmData) do
-		TSMAPI:QueryItemInfo(TSMAPI:GetItemString(itemString))
+		TSMAPI.Item:QueryInfo(TSMAPI.Item:ToItemString(itemString))
 	end
 	if not next(TSM.realmData) then
 		TSMAPI:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
@@ -197,7 +197,7 @@ local function InsertTooltipValueLine(itemString, quantity, key, lines, moneyCoi
 end
 
 function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
-	itemString = TSMAPI:GetBaseItemString2(itemString)
+	itemString = TSMAPI.Item:ToBaseItemString2(itemString)
 	if not itemString then return end
 	local numStartingLines = #lines
 	
@@ -245,7 +245,7 @@ function TSM:GetLastCompleteScanTime()
 end
 
 function TSM:GetItemData(itemString, key, isGlobal)
-	itemString = TSMAPI:GetBaseItemString2(itemString)
+	itemString = TSMAPI.Item:ToBaseItemString2(itemString)
 	local scanData = nil
 	if isGlobal then
 		scanData = TSM.globalData
