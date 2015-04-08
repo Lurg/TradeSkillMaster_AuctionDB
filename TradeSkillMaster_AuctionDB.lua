@@ -165,7 +165,7 @@ function TSM:OnEnable()
 		TSMAPI.Item:QueryInfo(TSMAPI.Item:ToItemString(itemString))
 	end
 	if not next(TSM.realmData) then
-		TSMAPI:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
+		TSMAPI.Util:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
 	end
 end
 

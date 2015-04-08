@@ -78,7 +78,7 @@ end
 local function DecodeScanData(rawData, keys, saveTime)
 	if not rawData then return end
 	local result = {}
-	for _, part in ipairs(TSMAPI:SafeStrSplit(rawData, ",")) do
+	for _, part in ipairs(TSMAPI.Util:SafeStrSplit(rawData, ",")) do
 		local temp = {}
 		local itemString = nil
 		for i, subPart in ipairs({("/"):split(part)}) do
