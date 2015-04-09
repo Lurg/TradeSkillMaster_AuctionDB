@@ -247,7 +247,7 @@ function private:ProcessScanDataThread(self, scanData, itemList)
 	-- process new data
 	TSM.updatedRealmData = true
 	for itemString, data in pairs(scanData) do
-		itemString = TSMAPI.Item:ToBaseItemString2(itemString)
+		itemString = TSMAPI.Item:ToBaseItemString(itemString)
 		if TSM.db.realm.hasAppData and TSM.realmData[itemString] then
 			-- if we have data from the app, just update the minBuyout/numAuctions/lastScan
 			TSM.realmData[itemString].minBuyout = data.minBuyout

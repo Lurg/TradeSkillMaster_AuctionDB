@@ -197,7 +197,6 @@ local function InsertTooltipValueLine(itemString, quantity, key, lines, moneyCoi
 end
 
 function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
-	itemString = TSMAPI.Item:ToBaseItemString2(itemString)
 	if not itemString then return end
 	local numStartingLines = #lines
 	
@@ -245,7 +244,6 @@ function TSM:GetLastCompleteScanTime()
 end
 
 function TSM:GetItemData(itemString, key, isGlobal)
-	itemString = TSMAPI.Item:ToBaseItemString2(itemString)
 	local scanData = nil
 	if isGlobal then
 		scanData = TSM.globalData
