@@ -13,8 +13,8 @@ local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- loads the localization table
 
 
-function Config:Load(parent)
 
+function Config:Load(parent)
 	local tg = AceGUI:Create("TSMTabGroup")
 	tg:SetLayout("Fill")
 	tg:SetFullHeight(true)
