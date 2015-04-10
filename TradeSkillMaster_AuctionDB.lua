@@ -244,6 +244,7 @@ function TSM:GetLastCompleteScanTime()
 end
 
 function TSM:GetItemData(itemString, key, isGlobal)
+	itemString = TSMAPI.Item:ToBaseItemString(itemString)
 	local scanData = nil
 	if isGlobal then
 		scanData = TSM.globalData
