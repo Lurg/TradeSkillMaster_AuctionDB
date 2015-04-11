@@ -218,13 +218,14 @@ function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
 	-- add the header if we've added at least one line
 	if #lines > numStartingLines then
 		local lastScan = TSM:GetItemData(itemString, "lastScan")
-		local rightStr = L["Not Scanned"]
+		local rightStr = "|cffffffff"..L["Not Scanned"].."|r"
 		if lastScan then
+			local timeColor = (time() - lastScan) > 60*60*3 and "|cffff0000" or "|cff00ff00"
 			local timeDiff = SecondsToTime(time() - lastScan)
 			local numAuctions = TSM:GetItemData(itemString, "numAuctions") or 0
-			rightStr = format("%s auctions (%s ago)", numAuctions, timeDiff)
+			rightStr = format("%s (%s)", format("|cffffffff"..L["%d auctions"].."|r", numAuctions), format(timeColor..L["%s ago"].."|r", timeDiff))
 		end
-		tinsert(lines, numStartingLines+1, {left="|cffffff00TSM AuctionDB:|r", right="|cffffffff"..rightStr.."|r"})
+		tinsert(lines, numStartingLines+1, {left="|cffffff00TSM AuctionDB:|r", right=rightStr})
 	end
 end
 
