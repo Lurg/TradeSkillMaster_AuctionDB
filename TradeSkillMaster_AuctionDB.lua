@@ -79,9 +79,7 @@ function TSM:RegisterModule()
 		{ key = "DBGlobalHistorical", label = L["AuctionDB - Global Historical Price (via TSM App)"], callback = "GetGlobalItemData", arg = "globalHistorical", takeItemString = true },
 		{ key = "DBGlobalSaleAvg", label = L["AuctionDB - Global Sale Average (via TSM App)"], callback = "GetGlobalItemData", arg = "globalSale", takeItemString = true },
 	}
-	TSM.icons = {
-		{ side = "module", desc = "AuctionDB", slashCommand = "auctiondb", callback = "Config:Load", icon = "Interface\\Icons\\Inv_Misc_Platnumdisks" },
-	}
+	TSM.moduleOptions = {callback="Config:Load"}
 	if TSM.db.profile.showAHTab then
 		TSM.auctionTab = { callbackShow = "GUI:Show", callbackHide = "GUI:Hide" }
 	end

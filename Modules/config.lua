@@ -14,26 +14,11 @@ local L = LibStub("AceLocale-3.0"):GetLocale("TradeSkillMaster_AuctionDB") -- lo
 
 
 
-function Config:Load(parent)
-	local tg = AceGUI:Create("TSMTabGroup")
-	tg:SetLayout("Fill")
-	tg:SetFullHeight(true)
-	tg:SetFullWidth(true)
-	tg:SetTabs({{value=1, text=L["Options"]}})
-	tg:SetCallback("OnGroupSelected", function(self, _, value)
-		tg:ReleaseChildren()
-		parent:DoLayout()
+-- ============================================================================
+-- Module Options
+-- ============================================================================
 
-		if value == 1 then
-			Config:LoadOptions(tg)
-		end
-		tg.children[1]:DoLayout()
-	end)
-	parent:AddChild(tg)
-	tg:SelectTab(1)
-end
-
-function Config:LoadOptions(container)
+function Config:Load(container)
 	local lastScanInfo
 	if TSM.db.realm.lastCompleteScan > 0 then
 		if TSM.db.realm.hasAppData then
@@ -81,6 +66,12 @@ function Config:LoadOptions(container)
 
 	TSMAPI.GUI:BuildOptions(container, page)
 end
+
+
+
+-- ============================================================================
+-- Tooltip Options
+-- ============================================================================
 
 function Config:LoadTooltipOptions(container, options)
 	local page = {
