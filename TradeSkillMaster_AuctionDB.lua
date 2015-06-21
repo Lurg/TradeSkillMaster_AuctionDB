@@ -97,6 +97,7 @@ function TSM:OnEnable()
 	if appData then
 		for _, info in ipairs(appData) do
 			local realm, data = unpack(info)
+			TSM:LOG_INFO("Got AppData for %s (isGlobal=%s, isCurrent=%s)", realm, tostring(realm == "Global"), tostring(TSMAPI.AppHelper:IsCurrentRealm(realm)))
 			if realm == "Global" then
 				globalAppData = assert(loadstring(data))()
 			elseif TSMAPI.AppHelper:IsCurrentRealm(realm) then
