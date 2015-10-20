@@ -54,7 +54,7 @@ function Config:Load(container)
 						{
 							type = "CheckBox",
 							label = L["Show AuctionDB AH Tab (Requires Reload)"],
-							settingInfo = { TSM.db.profile, "showAHTab" },
+							settingInfo = { TSM.db.global, "showAHTab" },
 							relativeWidth = 0.5,
 							tooltip = L["If checked, AuctionDB will add a tab to the AH to allow for in-game scans. If you are using the TSM app exclusively for your scans, you may want to hide it by unchecking this option. This option requires a reload to take effect."],
 						},

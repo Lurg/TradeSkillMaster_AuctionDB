@@ -23,21 +23,20 @@ StaticPopupDialogs["TSM_AUCTIONDB_NO_DATA_POPUP"] = {
 	preferredIndex = 3,
 }
 
-local savedDBDefaults = {
+local settingsInfo = {
+	version = 1,
 	realm = {
-		lastSaveTime = nil,
-		scanData = "",
-		lastCompleteScan = 0,
-		lastPartialScan = 0,
-		hasAppData = nil,
+		hasAppData = { type = "boolean", default = true, lastModifiedVersion = 1},
+		lastSaveTime = { type = "number", default = 0, lastModifiedVersion = 1},
+		lastCompleteScan = { type = "number", default = 0, lastModifiedVersion = 1},
+		lastPartialScan = { type = "number", default = 0, lastModifiedVersion = 1},
+		scanData = { type = "string", default = "", lastModifiedVersion = 1},
 	},
 	global = {
-		scanData = "",
-		lastUpdate = 0,
-		helpPlatesShown = {auction=nil},
-	},
-	profile = {
-		showAHTab = true,
+		scanData = { type = "string", default = "", lastModifiedVersion = 1},
+		lastUpdate = { type = "number", default = 0, lastModifiedVersion = 1},
+		helpPlatesShown = { type = "table", default = { auction = nil }, lastModifiedVersion = 1},
+		showAHTab = { type = "boolean", default = true, lastModifiedVersion = 1},
 	},
 }
 local tooltipDefaults = {
@@ -52,8 +51,8 @@ local tooltipDefaults = {
 
 -- Called once the player has loaded WOW.
 function TSM:OnInitialize()
-	-- load the savedDB into TSM.db
-	TSM.db = LibStub:GetLibrary("AceDB-3.0"):New("TradeSkillMaster_AuctionDBDB", savedDBDefaults, true)
+	-- load settings
+	TSM.db = TSMAPI.Settings:Init("TradeSkillMaster_AuctionDBDB", settingsInfo)
 
 	-- make easier references to all the modules
 	for moduleName, module in pairs(TSM.modules) do
@@ -62,9 +61,6 @@ function TSM:OnInitialize()
 
 	-- register this module with TSM
 	TSM:RegisterModule()
-	
-	-- TSM3 changes
-	TSM.db.realm.appDataUpdate = nil
 end
 
 -- registers this module with TSM by first setting all fields and then calling TSMAPI:NewModule().
@@ -80,7 +76,7 @@ function TSM:RegisterModule()
 		{ key = "DBGlobalSaleAvg", label = L["AuctionDB - Global Sale Average (via TSM App)"], callback = "GetGlobalItemData", arg = "globalSale", takeItemString = true },
 	}
 	TSM.moduleOptions = {callback="Config:Load"}
-	if TSM.db.profile.showAHTab then
+	if TSM.db.global.showAHTab then
 		TSM.auctionTab = { callbackShow = "GUI:Show", callbackHide = "GUI:Hide" }
 	end
 	TSM.moduleAPIs = {
