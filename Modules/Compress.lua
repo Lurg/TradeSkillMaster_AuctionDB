@@ -76,7 +76,7 @@ local function EncodeScanData(rawData, keys, saveTime)
 end
 
 local function DecodeScanData(rawData, keys, saveTime)
-	if not rawData then return end
+	if not rawData or rawData == "" then return end
 	local result = {}
 	for _, part in ipairs(TSMAPI.Util:SafeStrSplit(rawData, ",")) do
 		local temp = {}
