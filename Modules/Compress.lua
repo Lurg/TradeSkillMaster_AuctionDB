@@ -107,7 +107,7 @@ function Compress:SaveRealmData()
 end
 
 function Compress:LoadRealmData()
-	if not TSM.db.realm.lastSaveTime or TSM.db.realm.lastSaveTime > time() then
+	if not TSM.db.realm.lastSaveTime or TSM.db.realm.lastSaveTime == 0 or TSM.db.realm.lastSaveTime > time() then
 		TSM.realmData = {}
 	else
 		TSM.realmData = DecodeScanData(TSM.db.realm.scanData, REALM_SAVE_KEYS, TSM.db.realm.lastSaveTime)
