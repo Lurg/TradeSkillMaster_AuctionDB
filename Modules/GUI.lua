@@ -205,7 +205,7 @@ function private:Create(parent)
 			ButtonPos = {x = 380, y = -75},
 			HighLightBox = {x = 2, y = -12, width = 615, height = 295},
 			ToolTipDir = "DOWN",
-			ToolTipText = "If you have created TSM groups, they will be listed here for selection."
+			ToolTipText = L["If you have created TSM groups, they will be listed here for selection."]
 		},
 		{
 			ButtonPos = {x = 800, y = -20},
@@ -217,13 +217,13 @@ function private:Create(parent)
 			ButtonPos = {x = 800, y = -120},
 			HighLightBox = {x = 622, y = -100, width = 200, height = 80},
 			ToolTipDir = "RIGHT",
-			ToolTipText = "A full scan is a slow, manual scan of the entire auction house."
+			ToolTipText = L["A full scan is a slow, manual scan of the entire auction house."]
 		},
 		{
 			ButtonPos = {x = 800, y = -190},
 			HighLightBox = {x = 622, y = -190, width = 200, height = 50},
 			ToolTipDir = "RIGHT",
-			ToolTipText = "This button will scan just the items in the groups you have selected."
+			ToolTipText = L["This button will scan just the items in the groups you have selected."]
 		},
 	}
 	
