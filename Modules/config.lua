@@ -36,7 +36,7 @@ function Config:Load(container)
 			children = {
 				{
 					type = "InlineGroup",
-					title = "Last Update Time",
+					title = L["Last Update Time"],
 					layout = "Flow",
 					children = {
 						{
@@ -48,7 +48,7 @@ function Config:Load(container)
 				},
 				{
 					type = "InlineGroup",
-					title = "General Options",
+					title = L["General Options"],
 					layout = "Flow",
 					children = {
 						{

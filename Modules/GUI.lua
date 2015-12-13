@@ -211,7 +211,7 @@ function private:Create(parent)
 			ButtonPos = {x = 800, y = -20},
 			HighLightBox = {x = 622, y = -12, width = 200, height = 80},
 			ToolTipDir = "RIGHT",
-			ToolTipText = "A 'GetAll' scan is an extremely fast way to manually scan the entire AH, but may run into bugs on Blizzard's end such as disconnection issues. It also has a 15 minute cooldown."
+			ToolTipText = L["A 'GetAll' scan is an extremely fast way to manually scan the entire AH, but may run into bugs on Blizzard's end such as disconnection issues. It also has a 15 minute cooldown."]
 		},
 		{
 			ButtonPos = {x = 800, y = -120},

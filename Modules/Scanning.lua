@@ -84,7 +84,7 @@ function private.FullScanThread(self)
 		end
 	end
 	
-	TSM.GUI:UpdateStatus("Processing data...", 100)
+	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	local scanData = {}
 	for _, record in ipairs(database.records) do
 		if not scanData[record.itemString] then
@@ -155,7 +155,7 @@ function private.GroupScanThread(self, itemList)
 		end
 	end
 	
-	TSM.GUI:UpdateStatus("Processing data...", 100)
+	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	local scanData = {}
 	for _, record in ipairs(database.records) do
 		if not scanData[record.itemString] then
@@ -189,7 +189,7 @@ function private.GetAllScanThread(self)
 		elseif event == "GETALL_PROGRESS" then
 			-- progress update
 			local currentIndex, numAuctions = unpack(args)
-			TSM.GUI:UpdateStatus("Scanning results...", currentIndex*100/numAuctions)
+			TSM.GUI:UpdateStatus(L["Scanning results..."], currentIndex*100/numAuctions)
 		elseif event == "SCAN_COMPLETE" then
 			-- we are done scanning
 			scanData = unpack(args)
@@ -209,7 +209,7 @@ function private.GetAllScanThread(self)
 	end
 	
 	-- process the scan data
-	TSM.GUI:UpdateStatus("Processing data...", 100)
+	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	private:ProcessScanDataThread(self, scanData)
 	TSM.GUI:UpdateStatus(L["Done Scanning"], 100)
 end

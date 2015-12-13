@@ -176,7 +176,7 @@ local TOOLTIP_STRINGS = {
 	globalMinBuyout = {L["Global Min Buyout Avg:"], L["Global Min Buyout Avg x%s:"]},
 	globalMarketValue = {L["Global Market Value Avg:"], L["Global Market Value Avg x%s:"]},
 	globalHistorical = {L["Global Historical Price:"], L["Global Historical Price x%s:"]},
-	globalSale = {"Global Sale Avg:", "Global Sale Avg x%s:"},
+	globalSale = {L["Global Sale Avg:"], L["Global Sale Avg x%s:"]},
 }
 local function InsertTooltipValueLine(itemString, quantity, key, lines, moneyCoins, options)
 	if not options[key] then return end
