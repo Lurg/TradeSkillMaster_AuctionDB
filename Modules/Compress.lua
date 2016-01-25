@@ -12,7 +12,7 @@ local Compress = TSM:NewModule("Compress")
 
 
 local REALM_SAVE_KEYS = {"itemString", "numAuctions", "minBuyout", "marketValue", "lastScan", "historical"}
-local GLOBAL_SAVE_KEYS = {"itemString", "globalMarketValue", "globalMinBuyout", "globalSale", "globalHistorical"}
+local REGION_SAVE_KEYS = {"itemString", "regionMarketValue", "regionMinBuyout", "regionSale", "regionHistorical"}
 local ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_="
 local BASE = #ALPHA
 local ENCODE_TABLE = {}
@@ -118,15 +118,30 @@ function Compress:LoadRealmData()
 	end
 end
 
-function Compress:SaveGlobalData()
-	if not TSM.updatedGlobalData or not TSM.globalData then return end
-	TSM.db.global.scanData = EncodeScanData(TSM.globalData, GLOBAL_SAVE_KEYS)
+function Compress:SaveRegionDataUS()
+	if TSM.updatedRegionDataUS and TSM.regionDataUS then
+		TSM.db.global.scanDataUS = EncodeScanData(TSM.regionDataUS, REGION_SAVE_KEYS)
+	end
 end
 
-function Compress:LoadGlobalData()
-	TSM.globalData = DecodeScanData(TSM.db.global.scanData, GLOBAL_SAVE_KEYS)
+function Compress:SaveRegionDataEU()
+	if TSM.updatedRegionDataEU and TSM.regionDataEU then
+		TSM.db.global.scanDataEU = EncodeScanData(TSM.regionDataEU, REGION_SAVE_KEYS)
+	end
+end
+
+function Compress:LoadRegionDataUS()
+	TSM.regionDataUS = DecodeScanData(TSM.db.global.scanDataUS, REGION_SAVE_KEYS)
 	-- if we weren't able to decode, just clear the scan data
-	if type(TSM.globalData) ~= "table" then
-		TSM.globalData = {}
+	if type(TSM.regionDataUS) ~= "table" then
+		TSM.regionDataUS = {}
+	end
+end
+
+function Compress:LoadRegionDataEU()
+	TSM.regionDataEU = DecodeScanData(TSM.db.global.scanDataEU, REGION_SAVE_KEYS)
+	-- if we weren't able to decode, just clear the scan data
+	if type(TSM.regionDataEU) ~= "table" then
+		TSM.regionDataEU = {}
 	end
 end
