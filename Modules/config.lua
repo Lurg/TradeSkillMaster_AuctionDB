@@ -135,7 +135,7 @@ function Config:LoadTooltipOptions(container, options)
 				{
 					type = "CheckBox",
 					label = L["Display region sale rate (via TSM Application) in the tooltip."],
-					settingInfo = { options, "regionSaleRate" },
+					settingInfo = { options, "regionSalePercent" },
 					relativeWidth = 1,
 					tooltip = L["If checked, the region sale rate of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},

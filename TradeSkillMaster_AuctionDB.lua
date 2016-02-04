@@ -43,7 +43,7 @@ local settingsInfo = {
 	},
 }
 local tooltipDefaults = {
-	_version = 1,
+	_version = 2,
 	minBuyout = true,
 	marketValue = true,
 	historical = false,
@@ -51,7 +51,7 @@ local tooltipDefaults = {
 	regionMarketValue = true,
 	regionHistorical = false,
 	regionSale = true,
-	regionSaleRate = true,
+	regionSalePercent = true,
 	regionSoldPerDay = true,
 	globalMinBuyout = false,
 	globalMarketValue = false,
@@ -223,14 +223,20 @@ local TOOLTIP_STRINGS = {
 	regionMarketValue = {L["Region Market Value Avg:"], L["Region Market Value Avg x%s:"]},
 	regionHistorical = {L["Region Historical Price:"], L["Region Historical Price x%s:"]},
 	regionSale = {L["Region Sale Avg:"], L["Region Sale Avg x%s:"]},
-	regionSaleRate = {L["Region Sale Rate:"], L["Region Sale Rate x%s:"]},
+	regionSalePercent = {L["Region Sale Rate:"], L["Region Sale Rate x%s:"]},
 	regionSoldPerDay = {L["Region Avg Daily Sold:"], L["Region Avg Daily Sold x%s:"]},
 	globalMinBuyout = {L["Global Min Buyout Avg:"], L["Global Min Buyout Avg x%s:"]},
 	globalMarketValue = {L["Global Market Value Avg:"], L["Global Market Value Avg x%s:"]},
 	globalHistorical = {L["Global Historical Price:"], L["Global Historical Price x%s:"]},
 	globalSale = {L["Global Sale Avg:"], L["Global Sale Avg x%s:"]},
 }
-local function InsertTooltipValueLine(itemString, quantity, key, scope, lines, moneyCoins, options)
+local function TooltipMoneyFormat(value, quantity, moneyCoins)
+	return TSMAPI:MoneyToString(value*quantity, "|cffffffff", "OPT_PAD", moneyCoins and "OPT_ICON" or nil)
+end
+local function TooltipX100Format(value)
+	return "|cffffffff"..format("%0.2f", value/100).."|r"
+end
+local function InsertTooltipValueLine(itemString, quantity, key, scope, lines, options, formatter, ...)
 	if not options[key] then return end
 	local value = nil
 	if scope == "global" then
@@ -247,7 +253,7 @@ local function InsertTooltipValueLine(itemString, quantity, key, scope, lines, m
 	TSMAPI:Assert(strings, "Could not find tooltip strings for :"..tostring(key))
 	
 	local leftStr = "  "..(quantity > 1 and format(strings[2], quantity) or strings[1])
-	local rightStr = TSMAPI:MoneyToString(value*quantity, "|cffffffff", "OPT_PAD", moneyCoins and "OPT_ICON" or nil)
+	local rightStr = formatter(value, quantity, ...)
 	tinsert(lines, {left=leftStr, right=rightStr})
 end
 
@@ -256,31 +262,31 @@ function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
 	local numStartingLines = #lines
 	
 	-- add min buyout
-	InsertTooltipValueLine(itemString, quantity, "minBuyout", "realm", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "minBuyout", "realm", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add market value
-	InsertTooltipValueLine(itemString, quantity, "marketValue", "realm", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "marketValue", "realm", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add historical price
-	InsertTooltipValueLine(itemString, quantity, "historical", "realm", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "historical", "realm", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add region min buyout
-	InsertTooltipValueLine(itemString, quantity, "regionMinBuyout", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionMinBuyout", "region", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add region market value
-	InsertTooltipValueLine(itemString, quantity, "regionMarketValue", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionMarketValue", "region", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add region historical price
-	InsertTooltipValueLine(itemString, quantity, "regionHistorical", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionHistorical", "region", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add region sale avg
-	InsertTooltipValueLine(itemString, quantity, "regionSale", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionSale", "region", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add region sale rate
-	InsertTooltipValueLine(itemString, quantity, "regionSaleRate", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionSalePercent", "region", lines, options, TooltipX100Format)
 	-- add region sold per day
-	InsertTooltipValueLine(itemString, quantity, "regionSoldPerDay", "region", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "regionSoldPerDay", "region", lines, options, TooltipX100Format)
 	-- add global min buyout
-	InsertTooltipValueLine(itemString, quantity, "globalMinBuyout", "global", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "globalMinBuyout", "global", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add global market value
-	InsertTooltipValueLine(itemString, quantity, "globalMarketValue", "global", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "globalMarketValue", "global", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add global historical price
-	InsertTooltipValueLine(itemString, quantity, "globalHistorical", "global", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "globalHistorical", "global", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add global sale avg
-	InsertTooltipValueLine(itemString, quantity, "globalSale", "global", lines, moneyCoins, options)
+	InsertTooltipValueLine(itemString, quantity, "globalSale", "global", lines, options, TooltipMoneyFormat, moneyCoins)
 	
 	-- add the header if we've added at least one line
 	if #lines > numStartingLines then
