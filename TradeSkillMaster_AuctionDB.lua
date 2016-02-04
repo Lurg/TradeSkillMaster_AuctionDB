@@ -303,9 +303,9 @@ function TSM:GetLastCompleteScanTime()
 end
 
 function private.GetItemDataHelper(tbl, key, itemString)
-	if not itemString or not tbl or not tbl[itemString] or (tbl[itemString][key] or 0) <= 0 then return end
-	local value = tbl[itemString][key]
-	if not value then
+	if not itemString or not tbl then return end
+	local value = tbl[itemString] and tbl[itemString][key] or nil
+	if not value or value <= 0 then
 		local baseItemString = TSMAPI.Item:ToBaseItemString(itemString)
 		if not baseItemString then return end
 		value = tbl[baseItemString] and tbl[baseItemString][key] or nil
