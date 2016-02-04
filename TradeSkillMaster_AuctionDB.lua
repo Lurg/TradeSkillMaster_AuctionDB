@@ -303,19 +303,22 @@ function TSM:GetLastCompleteScanTime()
 end
 
 function private.GetItemDataHelper(tbl, key, itemString)
-	if not tbl or not tbl[itemString] or (tbl[itemString][key] or 0) <= 0 then return end
-	return tbl[itemString][key]
+	if not itemString or not tbl or not tbl[itemString] or (tbl[itemString][key] or 0) <= 0 then return end
+	local value = tbl[itemString][key]
+	if not value then
+		local baseItemString = TSMAPI.Item:ToBaseItemString(itemString)
+		if not baseItemString then return end
+		value = tbl[baseItemString] and tbl[baseItemString][key] or nil
+	end
+	if value and value <= 0 then return end
+	return value
 end
 
 function TSM:GetRealmItemData(itemString, key)
-	itemString = TSMAPI.Item:ToBaseItemString(itemString)
-	if not itemString then return end
 	return private.GetItemDataHelper(TSM.realmData, key, itemString)
 end
 
 function TSM:GetRegionItemData(itemString, key)
-	itemString = TSMAPI.Item:ToBaseItemString(itemString)
-	if not itemString then return end
 	if private.region == "US" then
 		return private.GetItemDataHelper(TSM.regionDataUS, key, itemString)
 	elseif private.region == "EU" then
@@ -327,8 +330,6 @@ function TSM:GetRegionItemData(itemString, key)
 end
 
 function TSM:GetGlobalItemData(itemString, key)
-	itemString = TSMAPI.Item:ToBaseItemString(itemString)
-	if not itemString then return end
 	-- translate to region keys
 	if not private.globalKeyLookup[key] then
 		private.globalKeyLookup[key] = gsub(key, "^global", "region")
