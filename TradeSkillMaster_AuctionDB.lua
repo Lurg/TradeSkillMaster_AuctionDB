@@ -43,6 +43,7 @@ local settingsInfo = {
 	},
 }
 local tooltipDefaults = {
+	_version = 1,
 	minBuyout = true,
 	marketValue = true,
 	historical = false,
@@ -50,6 +51,8 @@ local tooltipDefaults = {
 	regionMarketValue = true,
 	regionHistorical = false,
 	regionSale = true,
+	regionSaleRate = true,
+	regionSoldPerDay = true,
 	globalMinBuyout = false,
 	globalMarketValue = false,
 	globalHistorical = false,
@@ -220,6 +223,8 @@ local TOOLTIP_STRINGS = {
 	regionMarketValue = {L["Region Market Value Avg:"], L["Region Market Value Avg x%s:"]},
 	regionHistorical = {L["Region Historical Price:"], L["Region Historical Price x%s:"]},
 	regionSale = {L["Region Sale Avg:"], L["Region Sale Avg x%s:"]},
+	regionSaleRate = {L["Region Sale Rate:"], L["Region Sale Rate x%s:"]},
+	regionSoldPerDay = {L["Region Avg Daily Sold:"], L["Region Avg Daily Sold x%s:"]},
 	globalMinBuyout = {L["Global Min Buyout Avg:"], L["Global Min Buyout Avg x%s:"]},
 	globalMarketValue = {L["Global Market Value Avg:"], L["Global Market Value Avg x%s:"]},
 	globalHistorical = {L["Global Historical Price:"], L["Global Historical Price x%s:"]},
@@ -264,6 +269,10 @@ function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
 	InsertTooltipValueLine(itemString, quantity, "regionHistorical", "region", lines, moneyCoins, options)
 	-- add region sale avg
 	InsertTooltipValueLine(itemString, quantity, "regionSale", "region", lines, moneyCoins, options)
+	-- add region sale rate
+	InsertTooltipValueLine(itemString, quantity, "regionSaleRate", "region", lines, moneyCoins, options)
+	-- add region sold per day
+	InsertTooltipValueLine(itemString, quantity, "regionSoldPerDay", "region", lines, moneyCoins, options)
 	-- add global min buyout
 	InsertTooltipValueLine(itemString, quantity, "globalMinBuyout", "global", lines, moneyCoins, options)
 	-- add global market value

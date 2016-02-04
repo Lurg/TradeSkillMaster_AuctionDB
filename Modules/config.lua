@@ -106,13 +106,6 @@ function Config:LoadTooltipOptions(container, options)
 				},
 				{
 					type = "CheckBox",
-					label = L["Display region market value avg (via TSM Application) in the tooltip."],
-					settingInfo = { options, "regionMarketValue" },
-					relativeWidth = 1,
-					tooltip = L["If checked, the region market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
-				},
-				{
-					type = "CheckBox",
 					label = L["Display region min buyout avg (via TSM Application) in the tooltip."],
 					settingInfo = { options, "regionMinBuyout" },
 					relativeWidth = 1,
@@ -120,10 +113,10 @@ function Config:LoadTooltipOptions(container, options)
 				},
 				{
 					type = "CheckBox",
-					label = L["Display region sale avg (via TSM Application) in the tooltip."],
-					settingInfo = { options, "regionSale" },
+					label = L["Display region market value avg (via TSM Application) in the tooltip."],
+					settingInfo = { options, "regionMarketValue" },
 					relativeWidth = 1,
-					tooltip = L["If checked, the region sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+					tooltip = L["If checked, the region market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
@@ -134,10 +127,24 @@ function Config:LoadTooltipOptions(container, options)
 				},
 				{
 					type = "CheckBox",
-					label = L["Display global market value avg (via TSM Application) in the tooltip."],
-					settingInfo = { options, "globalMarketValue" },
+					label = L["Display region sale avg (via TSM Application) in the tooltip."],
+					settingInfo = { options, "regionSale" },
 					relativeWidth = 1,
-					tooltip = L["If checked, the global market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+					tooltip = L["If checked, the region sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+				},
+				{
+					type = "CheckBox",
+					label = L["Display region sale rate (via TSM Application) in the tooltip."],
+					settingInfo = { options, "regionSaleRate" },
+					relativeWidth = 1,
+					tooltip = L["If checked, the region sale rate of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+				},
+				{
+					type = "CheckBox",
+					label = L["Display region average daily sold quantity (via TSM Application) in the tooltip."],
+					settingInfo = { options, "regionSoldPerDay" },
+					relativeWidth = 1,
+					tooltip = L["If checked, the region average daily sold quantity of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
@@ -148,10 +155,10 @@ function Config:LoadTooltipOptions(container, options)
 				},
 				{
 					type = "CheckBox",
-					label = L["Display global sale avg (via TSM Application) in the tooltip."],
-					settingInfo = { options, "globalSale" },
+					label = L["Display global market value avg (via TSM Application) in the tooltip."],
+					settingInfo = { options, "globalMarketValue" },
 					relativeWidth = 1,
-					tooltip = L["If checked, the global sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+					tooltip = L["If checked, the global market value average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 				{
 					type = "CheckBox",
@@ -159,6 +166,13 @@ function Config:LoadTooltipOptions(container, options)
 					settingInfo = { options, "globalHistorical" },
 					relativeWidth = 1,
 					tooltip = L["If checked, the global historical price of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
+				},
+				{
+					type = "CheckBox",
+					label = L["Display global sale avg (via TSM Application) in the tooltip."],
+					settingInfo = { options, "globalSale" },
+					relativeWidth = 1,
+					tooltip = L["If checked, the global sale average of the item will be displayed. This is provided exclusively via the TradeSkillMaster Application."],
 				},
 			},
 		},
