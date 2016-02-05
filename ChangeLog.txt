@@ -1,3 +1,8 @@
+v3.1
+*Added support for new region-wide prices via the TSM Desktop Application.
+*Added support for different prices for different stages of WoD crafted items via the TSM Desktop Application.
+*Added support for the new region sale rate and daily sold quantity via the TSM Desktop Application.
+
 v3.0
 *Initial 3.0 version!
 \\
