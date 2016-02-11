@@ -319,13 +319,15 @@ end
 
 function private.GetItemDataHelper(tbl, key, itemString)
 	if not itemString or not tbl then return end
-	local value = tbl[itemString] and tbl[itemString][key] or nil
-	if not value or value <= 0 then
+	local value = nil
+	if tbl[itemString] then
+		value = tbl[itemString][key]
+	else
 		local baseItemString = TSMAPI.Item:ToBaseItemString(itemString)
 		if not baseItemString then return end
-		value = tbl[baseItemString] and tbl[baseItemString][key] or nil
+		value = tbl[baseItemString] and tbl[baseItemString][key]
 	end
-	if value and value <= 0 then return end
+	if not value or value <= 0 then return end
 	return value
 end
 
