@@ -1,3 +1,6 @@
+v3.1.1
+*Fixed bug with prices defaulting to the base item when missing for a specific variant.
+
 v3.1
 *Added support for new region-wide prices via the TSM Desktop Application.
 *Added support for different prices for different stages of WoD crafted items via the TSM Desktop Application.
