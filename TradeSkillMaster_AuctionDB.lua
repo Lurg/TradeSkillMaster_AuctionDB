@@ -84,6 +84,8 @@ function TSM:RegisterModule()
 		{ key = "DBRegionMarketAvg", label = L["AuctionDB - Region Market Value Average (via TSM App)"], callback = "GetRegionItemData", arg = "regionMarketValue", takeItemString = true },
 		{ key = "DBRegionHistorical", label = L["AuctionDB - Region Historical Price (via TSM App)"], callback = "GetRegionItemData", arg = "regionHistorical", takeItemString = true },
 		{ key = "DBRegionSaleAvg", label = L["AuctionDB - Region Sale Average (via TSM App)"], callback = "GetRegionItemData", arg = "regionSale", takeItemString = true },
+		{ key = "DBRegionSaleRate", label = L["AuctionDB - Region Sale Rate (via TSM App)"], callback = "GetRegionItemData", arg = "regionSalePercent", takeItemString = true },
+		{ key = "DBRegionAvgDailySold", label = L["AuctionDB - Region Average Sold Per Day (via TSM App)"], callback = "GetRegionItemData", arg = "regionSoldPerDay", takeItemString = true },
 		{ key = "DBGlobalMinBuyoutAvg", label = L["AuctionDB - Global Minimum Buyout Average (via TSM App)"], callback = "GetGlobalItemData", arg = "globalMinBuyout", takeItemString = true },
 		{ key = "DBGlobalMarketAvg", label = L["AuctionDB - Global Market Value Average (via TSM App)"], callback = "GetGlobalItemData", arg = "globalMarketValue", takeItemString = true },
 		{ key = "DBGlobalHistorical", label = L["AuctionDB - Global Historical Price (via TSM App)"], callback = "GetGlobalItemData", arg = "globalHistorical", takeItemString = true },
