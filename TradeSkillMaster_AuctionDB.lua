@@ -323,7 +323,10 @@ function private.GetItemDataHelper(tbl, key, itemString)
 	if tbl[itemString] then
 		value = tbl[itemString][key]
 	else
-        if strmatch(itemString, "^i:[0-9]+:[0-9%-]+:") then return end
+        local _, _, iRarity = TSMAPI.Item:GetInfo(itemString)
+        if iRarity >= 3 then
+            if strmatch(itemString, "^i:[0-9]+:[0-9%-]+:") then return end
+        end
 		local baseItemString = TSMAPI.Item:ToBaseItemString(itemString)
 		if not baseItemString then return end
 		value = tbl[baseItemString] and tbl[baseItemString][key]
