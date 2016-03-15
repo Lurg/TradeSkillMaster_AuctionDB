@@ -324,7 +324,7 @@ function private.GetItemDataHelper(tbl, key, itemString)
 		value = tbl[itemString][key]
 	else
         local _, _, iRarity = TSMAPI.Item:GetInfo(itemString)
-        if iRarity >= 3 then
+        if iRarity and iRarity >= 3 then
             if strmatch(itemString, "^i:[0-9]+:[0-9%-]+:") then return end
         end
 		local baseItemString = TSMAPI.Item:ToBaseItemString(itemString)
