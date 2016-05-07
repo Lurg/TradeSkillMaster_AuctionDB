@@ -47,10 +47,10 @@ end
 
 function private:Create(parent)
 	if private.frame then return end
-	
+
 	local function UpdateGetAllButton()
 	end
-	
+
 	local BFC = TSMAPI.GUI:GetBuildFrameConstants()
 	local frameInfo = {
 		type = "Frame",
@@ -179,6 +179,10 @@ function private:Create(parent)
 									end
 								end
 							end
+							if #items == 0 then
+								TSM:Print(L["You must select at least one group before starting the group scan."])
+								return
+							end
 							TSM.Scan:StartGroupScan(items)
 						end,
 					},
@@ -189,7 +193,7 @@ function private:Create(parent)
 	private.frame = TSMAPI.GUI:BuildFrame(frameInfo)
 	TSMAPI.Design:SetFrameBackdropColor(private.frame.content)
 	private.frame.statusBar = private.frame.content.statusBar
-	
+
 	-- create animation for app ad
 	local ag = private.frame.appAd:CreateAnimationGroup()
 	local a1 = ag:CreateAnimation("Alpha")
@@ -197,7 +201,7 @@ function private:Create(parent)
 	a1:SetDuration(.5)
 	ag:SetLooping("BOUNCE")
 	ag:Play()
-	
+
 	local helpPlateInfo = {
 		FramePos = {x=5, y=-100},
 		FrameSize = {width=private.frame:GetWidth(), height=private.frame:GetHeight()},
@@ -226,18 +230,18 @@ function private:Create(parent)
 			ToolTipText = L["This button will scan just the items in the groups you have selected."]
 		},
 	}
-	
+
 	local mainHelpBtn = CreateFrame("Button", nil, private.frame, "MainHelpPlateButton")
 	mainHelpBtn:SetPoint("TOPLEFT", private.frame, 70, 25)
 	mainHelpBtn:SetScript("OnClick", function() private:ToggleHelpPlate(private.frame, helpPlateInfo, mainHelpBtn, true) end)
 	mainHelpBtn:SetScript("OnHide", function() if HelpPlate_IsShowing(helpPlateInfo) then private:ToggleHelpPlate(private.frame, helpPlateInfo, mainHelpBtn, false) end end)
-	
+
 	if not TSM.db.global.helpPlatesShown.auction then
 		TSM.db.global.helpPlatesShown.auction = true
 		private:ToggleHelpPlate(private.frame, helpPlateInfo, mainHelpBtn, false)
 	end
 end
-	
+
 function private:ToggleHelpPlate(frame, info, btn, isUser)
 	if not HelpPlate_IsShowing(info) then
 		HelpPlate:SetParent(frame)
