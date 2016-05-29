@@ -24,16 +24,19 @@ local MAX_JUMP = 1.2 -- between the min and max percentiles, any increase in pri
 
 function Scan:StartFullScan()
 	Scan:StopScanning()
+	TSM:AnalyticsEvent("START_FULL_SCAN")
 	private.threadId = TSMAPI.Threading:Start(private.FullScanThread, 0.7, Scan.StopScanning)
 end
 
 function Scan:StartGroupScan(itemList)
 	Scan:StopScanning()
+	TSM:AnalyticsEvent("START_GROUP_SCAN")
 	private.threadId = TSMAPI.Threading:Start(private.GroupScanThread, 0.7, Scan.StopScanning, itemList)
 end
 
 function Scan:StartGetAllScan()
 	Scan:StopScanning()
+	TSM:AnalyticsEvent("START_GETALL_SCAN")
 	private.threadId = TSMAPI.Threading:Start(private.GetAllScanThread, 0.7, Scan.StopScanning)
 end
 
@@ -55,7 +58,7 @@ end
 function private.FullScanThread(self)
 	self:SetThreadName("AUCTIONDB_FULL_SCAN")
 	TSM.GUI:UpdateStatus(L["Running query..."], 0, 0)
-	
+
 	local database = TSMAPI.Auction:NewDatabase()
 	TSMAPI.Auction:ScanQuery("AuctionDB", {name=""}, self:GetSendMsgToSelfCallback(), nil, database)
 	local startTime = time()
@@ -83,7 +86,7 @@ function private.FullScanThread(self)
 			error("Unexpected message: "..tostring(event))
 		end
 	end
-	
+
 	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	local scanData = {}
 	for _, record in ipairs(database.records) do
@@ -107,7 +110,7 @@ end
 
 function private.GroupScanThread(self, itemList)
 	self:SetThreadName("AUCTIONDB_GROUP_SCAN")
-	
+
 	-- generate queries
 	TSM.GUI:UpdateStatus(L["Preparing Filters..."], 0, 0)
 	TSMAPI.Auction:GenerateQueries(itemList, self:GetSendMsgToSelfCallback())
@@ -127,7 +130,7 @@ function private.GroupScanThread(self, itemList)
 			error("Unexpected message: "..tostring(event))
 		end
 	end
-	
+
 	-- scan queries
 	TSM.GUI:UpdateStatus(L["Running query..."])
 	local numQueries = #queries
@@ -154,7 +157,7 @@ function private.GroupScanThread(self, itemList)
 			end
 		end
 	end
-	
+
 	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	local scanData = {}
 	for _, record in ipairs(database.records) do
@@ -207,7 +210,7 @@ function private.GetAllScanThread(self)
 			error("Unexpected message: "..tostring(event))
 		end
 	end
-	
+
 	-- process the scan data
 	TSM.GUI:UpdateStatus(L["Processing data..."], 100)
 	private:ProcessScanDataThread(self, scanData)
@@ -223,7 +226,7 @@ end
 function private:ProcessScanDataThread(self, scanData, itemList)
 	local scanTime = time()
 	TSM.db.realm.lastPartialScan = scanTime
-	
+
 	local scannedItems = nil
 	if itemList then
 		scannedItems = {}
@@ -233,7 +236,7 @@ function private:ProcessScanDataThread(self, scanData, itemList)
 	elseif not TSM.db.realm.hasAppData then
 		TSM.db.realm.lastCompleteScan = scanTime
 	end
-	
+
 	-- clear min buyotus / num auctions and update last scan time for items we should have scanned
 	for itemString, data in pairs(TSM.realmData) do
 		if not scannedItems or scannedItems[itemString] then
@@ -243,7 +246,7 @@ function private:ProcessScanDataThread(self, scanData, itemList)
 			self:Yield()
 		end
 	end
-	
+
 	-- process new data
 	TSM.updatedRealmData = true
 	for itemString, data in pairs(scanData) do
@@ -271,37 +274,37 @@ end
 function private:CalculateMarketValue(buyouts)
 	local totalNum, totalBuyout = 0, 0
 	local numRecords = #buyouts
-	
+
 	for i=1, numRecords do
 		totalNum = i - 1
 		if i ~= 1 and i > numRecords*MIN_PERCENTILE and (i > numRecords*MAX_PERCENTILE or buyouts[i] >= MAX_JUMP*buyouts[i-1]) then
 			break
 		end
-		
+
 		totalBuyout = totalBuyout + buyouts[i]
 		if i == numRecords then
 			totalNum = i
 		end
 	end
-	
+
 	local uncorrectedMean = totalBuyout / totalNum
 	local varience = 0
-	
+
 	for i=1, totalNum do
 		varience = varience + (buyouts[i]-uncorrectedMean)^2
 	end
-	
+
 	local stdDev = sqrt(varience/totalNum)
 	local correctedTotalNum, correctedTotalBuyout = 1, uncorrectedMean
-	
+
 	for i=1, totalNum do
 		if abs(uncorrectedMean - buyouts[i]) < 1.5*stdDev then
 			correctedTotalNum = correctedTotalNum + 1
 			correctedTotalBuyout = correctedTotalBuyout + buyouts[i]
 		end
 	end
-	
+
 	local correctedMean = floor(correctedTotalBuyout / correctedTotalNum + 0.5)
-	
+
 	return correctedMean
 end
