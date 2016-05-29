@@ -102,8 +102,7 @@ function TSM:RegisterModule()
 end
 
 function TSM:OnEnable()
-	local region = GetCVar("portal")
-	private.region = region == "public-test" and "PTR" or region
+	private.region = LibStub("LibRealmInfo"):GetCurrentRegion() or "PTR"
 
 	local realmAppData, regionAppDataUS, regionAppDataEU = nil, nil, nil
 	local appData = TSMAPI.AppHelper and TSMAPI.AppHelper:FetchData("AUCTIONDB_MARKET_DATA") -- get app data from TSM_AppHelper if it's installed
@@ -148,7 +147,7 @@ function TSM:OnEnable()
 	else
 		TSM.Compress:LoadRealmData()
 	end
-	
+
 	-- check if we can load US region data from the app
 	if regionAppDataUS and regionAppDataUS.downloadTime >= TSM.db.global.lastUpdateUS then
 		TSM.updatedRegionDataUS = (regionAppDataUS.downloadTime > TSM.db.global.lastUpdateUS)
@@ -174,7 +173,7 @@ function TSM:OnEnable()
 	else
 		TSM.Compress:LoadRegionDataUS()
 	end
-	
+
 	-- check if we can load EU region data from the app
 	if regionAppDataEU and regionAppDataEU.downloadTime >= TSM.db.global.lastUpdateEU then
 		TSM.updatedRegionDataUS = (regionAppDataEU.downloadTime > TSM.db.global.lastUpdateEU)
@@ -200,7 +199,7 @@ function TSM:OnEnable()
 	else
 		TSM.Compress:LoadRegionDataEU()
 	end
-	
+
 	for itemString in pairs(TSM.realmData) do
 		TSMAPI.Item:QueryInfo(itemString)
 	end
@@ -251,7 +250,7 @@ local function InsertTooltipValueLine(itemString, quantity, key, scope, lines, o
 	if not value then return end
 	local strings = TOOLTIP_STRINGS[key]
 	TSMAPI:Assert(strings, "Could not find tooltip strings for :"..tostring(key))
-	
+
 	local leftStr = "  "..(quantity > 1 and format(strings[2], quantity) or strings[1])
 	local rightStr = formatter(value, quantity, ...)
 	tinsert(lines, {left=leftStr, right=rightStr})
@@ -260,7 +259,7 @@ end
 function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
 	if not itemString then return end
 	local numStartingLines = #lines
-	
+
 	-- add min buyout
 	InsertTooltipValueLine(itemString, quantity, "minBuyout", "realm", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add market value
@@ -287,7 +286,7 @@ function TSM:LoadTooltip(itemString, quantity, options, moneyCoins, lines)
 	InsertTooltipValueLine(itemString, quantity, "globalHistorical", "global", lines, options, TooltipMoneyFormat, moneyCoins)
 	-- add global sale avg
 	InsertTooltipValueLine(itemString, quantity, "globalSale", "global", lines, options, TooltipMoneyFormat, moneyCoins)
-	
+
 	-- add the header if we've added at least one line
 	if #lines > numStartingLines then
 		local lastScan = TSM:GetRealmItemData(itemString, "lastScan")
