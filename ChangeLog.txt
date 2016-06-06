@@ -1,3 +1,7 @@
+v3.1.5
+*Fixed bug with switching regions.
+*Added some analytics events.
+
 v3.1.4
 *Fixed bug and added error message for starting a group scan without selecting any groups.
 
