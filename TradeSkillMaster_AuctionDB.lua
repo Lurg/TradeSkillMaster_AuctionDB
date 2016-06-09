@@ -102,7 +102,7 @@ function TSM:RegisterModule()
 end
 
 function TSM:OnEnable()
-	private.region = LibStub("LibRealmInfo"):GetCurrentRegion() or "PTR"
+	private.region = TSMAPI:GetRegion()
 
 	local realmAppData, regionAppDataUS, regionAppDataEU = nil, nil, nil
 	local appData = TSMAPI.AppHelper and TSMAPI.AppHelper:FetchData("AUCTIONDB_MARKET_DATA") -- get app data from TSM_AppHelper if it's installed
