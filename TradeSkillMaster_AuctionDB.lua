@@ -17,11 +17,10 @@ TSM.MAX_AVG_DAY = 1
 local SECONDS_PER_DAY = 60 * 60 * 24
 
 StaticPopupDialogs["TSM_AUCTIONDB_NO_DATA_POPUP"] = {
-	text = "|cffff0000WARNING:|r TSM_AuctionDB doesn't currently have any pricing data for your realm. Either download the TSM Desktop Application from |cff99ffffhttp://tradeskillmaster.com|r to automatically update TSM_AuctionDB's data, or run a manual scan in-game.",
+	text = L["|cffff0000WARNING:|r TSM_AuctionDB doesn't currently have any pricing data for your realm. Either download the TSM Desktop Application from |cff99ffffhttp://tradeskillmaster.com|r to automatically update TSM_AuctionDB's data, or run a manual scan in-game."],
 	button1 = OKAY,
 	timeout = 0,
 	hideOnEscape = false,
-	preferredIndex = 3,
 }
 
 local settingsInfo = {
@@ -102,7 +101,17 @@ function TSM:RegisterModule()
 end
 
 function TSM:OnEnable()
-	private.region = TSMAPI:GetRegion()
+	if TSMAPI.GetRegion then
+		private.region = TSMAPI:GetRegion()
+	else
+		StaticPopupDialogs["TSM_AUCTIONDB_TSM_UPDATE"] = {
+			text = "|cffff0000WARNING:|r TradeSkillMaster v3.3.18 or higher is required for TSM_AuctionDB to function properly. Please update your addons.",
+			button1 = OKAY,
+			timeout = 0,
+			hideOnEscape = false,
+		}
+		TSMAPI.Util:ShowStaticPopupDialog("TSM_AUCTIONDB_TSM_UPDATE")
+	end
 
 	local realmAppData, regionAppDataUS, regionAppDataEU = nil, nil, nil
 	local appData = TSMAPI.AppHelper and TSMAPI.AppHelper:FetchData("AUCTIONDB_MARKET_DATA") -- get app data from TSM_AppHelper if it's installed
