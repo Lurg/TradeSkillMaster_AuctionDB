@@ -1,3 +1,6 @@
+v3.1.6
+*Fixed detection of region for some realms.
+
 v3.1.5
 *Fixed bug with switching regions.
 *Added some analytics events.
