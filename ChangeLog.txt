@@ -1,3 +1,6 @@
+v3.1.9
+*Fixed animation bug with TSM logo.
+
 v3.1.8
 *Implemented temporary workaround for Blizzard's servers being slow.
 
