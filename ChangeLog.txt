@@ -1,3 +1,6 @@
+v3.1.7
+*Bumped TOC version for patch 7.0.x.
+
 v3.1.6
 *Fixed detection of region for some realms.
 
