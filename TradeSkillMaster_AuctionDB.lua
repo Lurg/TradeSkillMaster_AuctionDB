@@ -144,7 +144,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.realmData[itemString] = {}
 				else
@@ -171,7 +171,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.regionDataUS[itemString] = {}
 				else
@@ -197,7 +197,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.regionDataEU[itemString] = {}
 				else
