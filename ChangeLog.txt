@@ -1,3 +1,6 @@
+v3.1.10
+*Fixed issue with pulling correct prices for bonus id items.
+
 v3.1.9
 *Fixed animation bug with TSM logo.
 
