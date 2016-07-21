@@ -146,7 +146,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.realmData[itemString] = {}
 				else
@@ -173,7 +173,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.regionDataUS[itemString] = {}
 				else
@@ -199,7 +199,7 @@ function TSM:OnEnable()
 					if type(data[i]) == "number" then
 						itemString = "i:"..data[i]
 					else
-						itemString = data[i]
+						itemString = gsub(data[i], ":0:", "::")
 					end
 					TSM.regionDataEU[itemString] = {}
 				else
@@ -211,9 +211,9 @@ function TSM:OnEnable()
 		TSM.Compress:LoadRegionDataEU()
 	end
 
-	for itemString in pairs(TSM.realmData) do
-		TSMAPI.Item:QueryInfo(itemString)
-	end
+	-- for itemString in pairs(TSM.realmData) do
+	-- 	TSMAPI.Item:QueryInfo(itemString)
+	-- end
 	if not next(TSM.realmData) then
 		TSMAPI.Util:ShowStaticPopupDialog("TSM_AUCTIONDB_NO_DATA_POPUP")
 	end

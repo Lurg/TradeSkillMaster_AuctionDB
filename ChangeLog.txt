@@ -1,3 +1,15 @@
+v3.1.10
+*Fixed issue with pulling correct prices for bonus id items.
+
+v3.1.9
+*Fixed animation bug with TSM logo.
+
+v3.1.8
+*Implemented temporary workaround for Blizzard's servers being slow.
+
+v3.1.7
+*Bumped TOC version for patch 7.0.x.
+
 v3.1.6
 *Fixed detection of region for some realms.
 

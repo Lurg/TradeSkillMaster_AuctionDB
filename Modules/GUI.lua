@@ -197,7 +197,12 @@ function private:Create(parent)
 	-- create animation for app ad
 	local ag = private.frame.appAd:CreateAnimationGroup()
 	local a1 = ag:CreateAnimation("Alpha")
-	a1:SetChange(-.4)
+	if select(4, GetBuildInfo()) >= 70000 then
+		a1:SetFromAlpha(0)
+		a1:SetToAlpha(-.4)
+	else
+		a1:SetChange(-.4)
+	end
 	a1:SetDuration(.5)
 	ag:SetLooping("BOUNCE")
 	ag:Play()
